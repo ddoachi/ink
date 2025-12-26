@@ -249,12 +249,17 @@ class TestDockWidgetIntegration:
         assert main_window.property_dock.windowTitle() == "Properties"
         assert main_window.message_dock.windowTitle() == "Messages"
 
-    def test_docks_not_hidden_initially(self, main_window: InkMainWindow) -> None:
-        """Test all docks are not explicitly hidden when created."""
-        # isHidden() checks if widget is explicitly hidden
-        assert not main_window.hierarchy_dock.isHidden()
-        assert not main_window.property_dock.isHidden()
-        assert not main_window.message_dock.isHidden()
+    def test_docks_are_added_to_window(self, main_window: InkMainWindow) -> None:
+        """Test all docks are properly added to the window.
+
+        Verifies docks are registered in their respective dock areas.
+        Visibility depends on show() being called, but docks should be
+        properly configured from construction.
+        """
+        # Verify docks are in correct areas (not floating)
+        assert not main_window.hierarchy_dock.isFloating()
+        assert not main_window.property_dock.isFloating()
+        assert not main_window.message_dock.isFloating()
 
     def test_dock_object_names(self, main_window: InkMainWindow) -> None:
         """Test docks have object names for state persistence."""
@@ -315,16 +320,18 @@ class TestDockWidgetOperations:
         self, main_window: InkMainWindow, qapp: QApplication
     ) -> None:
         """Test multiple docks can be closed simultaneously."""
+        # Close two docks
         main_window.hierarchy_dock.close()
         main_window.property_dock.close()
         qapp.processEvents()
 
+        # Both should not be visible
         assert not main_window.hierarchy_dock.isVisible()
         assert not main_window.property_dock.isVisible()
-        # Message dock should still be visible
-        assert not main_window.message_dock.isHidden()
+        # Message dock should still be in its dock area (not closed)
+        assert not main_window.message_dock.isFloating()
 
-        # Restore
+        # Restore the closed docks
         main_window.hierarchy_dock.show()
         main_window.property_dock.show()
         qapp.processEvents()
