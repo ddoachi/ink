@@ -1,0 +1,57 @@
+{
+  "workbench.colorTheme": "Dracula Theme",
+  "editor.tabSize": 2,
+  "editor.fontFamily": "'CascaydiaCove Nerd Font Mono', Cascadia Code Nerd Font, Cascadia Code, D2Coding, Consolas, Fira Code, monospace",
+  "terminal.integrated.fontFamily": "Hack Nerd Font Mono, Cascadia Code, monospace",
+  "editor.fontLigatures": true,
+  "editor.minimap.enabled": false,
+  "vim.useSystemClipboard": true,
+  "terminal.integrated.copyOnSelection": true,
+  "terminal.integrated.defaultProfile.linux": "zsh",
+
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.nx": true,
+    "**/.yarn": true,
+    "**/coverage": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.yarn": true,
+    "**/coverage": true
+  },
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+  "tailwindCSS.includeLanguages": {
+    "typescript": "html",
+    "typescriptreact": "html"
+  },
+  "eslint.workingDirectories": [{ "mode": "auto" }, { "directory": ".", "changeProcessCWD": true }],
+  "jest.jestCommandLine": "yarn test",
+  "nx.enableTelemetry": false,
+  "prettier.ignorePath": ".prettierignore",
+  "terminal.integrated.commandsToSkipShell": [
+    "workbench.action.focusLeftGroup",
+    "workbench.action.focusRightGroup",
+    "workbench.action.focusActiveEditorGroup",
+    "workbench.action.terminal.focus"
+  ]
+}
