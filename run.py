@@ -13,13 +13,15 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
+from ink.infrastructure.persistence.app_settings import AppSettings
 from ink.presentation.main_window import InkMainWindow
 
 
 def main() -> int:
     """Run the Ink application."""
     app = QApplication(sys.argv)
-    window = InkMainWindow()
+    settings = AppSettings()
+    window = InkMainWindow(settings)
     window.show()
     return app.exec()
 
