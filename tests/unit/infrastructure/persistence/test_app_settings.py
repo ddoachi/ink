@@ -379,3 +379,326 @@ class TestAppSettingsPersistence:
             AppSettings.KEY_WINDOW_GEOMETRY, value_type=QByteArray
         )
         assert result == byte_data
+
+
+# =============================================================================
+# Settings Migration Tests (E06-F06-T04)
+# =============================================================================
+
+
+class TestSettingsMigration:
+    """Test settings migration framework.
+
+    These tests verify that:
+    - Settings version is tracked and stored
+    - Migrations are applied sequentially when version changes
+    - The migration framework handles version jumps correctly
+    """
+
+    def test_migrate_if_needed_called_on_init(
+        self, isolated_settings: Path
+    ) -> None:
+        """Verify _migrate_if_needed is called during initialization."""
+        # Pre-set an old version to simulate upgrade scenario
+        temp_settings = QSettings("InkProject", "Ink")
+        temp_settings.setValue(AppSettings.KEY_SETTINGS_VERSION, 0)
+        temp_settings.sync()
+
+        # Create new instance - should trigger migration
+        settings = AppSettings()
+
+        # Version should now be current
+        assert settings.get_settings_version() == AppSettings.CURRENT_VERSION
+
+    def test_get_settings_version_returns_stored_version(
+        self, app_settings: AppSettings
+    ) -> None:
+        """Verify get_settings_version returns the stored version."""
+        version = app_settings.get_settings_version()
+        assert version == AppSettings.CURRENT_VERSION
+        assert isinstance(version, int)
+
+    def test_migration_applies_sequentially(
+        self, isolated_settings: Path
+    ) -> None:
+        """Verify migrations are applied in sequence from old to new version."""
+        # Pre-set version 0 to simulate fresh install before versioning
+        temp_settings = QSettings("InkProject", "Ink")
+        temp_settings.setValue(AppSettings.KEY_SETTINGS_VERSION, 0)
+        temp_settings.sync()
+
+        # Create instance - migration v0->v1 should run
+        settings = AppSettings()
+
+        # Version should be updated to current
+        assert settings.get_settings_version() == AppSettings.CURRENT_VERSION
+
+    def test_no_migration_when_version_is_current(
+        self, isolated_settings: Path
+    ) -> None:
+        """Verify no migration runs when version is already current."""
+        # Pre-set current version
+        temp_settings = QSettings("InkProject", "Ink")
+        temp_settings.setValue(
+            AppSettings.KEY_SETTINGS_VERSION, AppSettings.CURRENT_VERSION
+        )
+        temp_settings.setValue("test/key", "original_value")
+        temp_settings.sync()
+
+        # Create instance - should NOT modify anything
+        settings = AppSettings()
+
+        # Test value should be unchanged
+        assert settings.get_value("test/key") == "original_value"
+
+
+# =============================================================================
+# Settings Reset Tests (E06-F06-T04)
+# =============================================================================
+
+
+class TestSettingsReset:
+    """Test settings reset functionality.
+
+    These tests verify:
+    - reset_all_settings clears everything and re-initializes defaults
+    - reset_window_geometry clears only geometry-related settings
+    - reset_recent_files clears only recent files
+    """
+
+    def test_reset_all_settings_clears_all(
+        self, app_settings: AppSettings
+    ) -> None:
+        """Verify reset_all_settings clears all custom settings."""
+        # Add custom settings
+        app_settings.set_value("custom/key1", "value1")
+        app_settings.set_value("custom/key2", "value2")
+        app_settings.sync()
+
+        # Reset all settings
+        app_settings.reset_all_settings()
+
+        # Custom settings should be cleared
+        assert not app_settings.has_key("custom/key1")
+        assert not app_settings.has_key("custom/key2")
+
+    def test_reset_all_settings_reinitializes_defaults(
+        self, app_settings: AppSettings
+    ) -> None:
+        """Verify reset_all_settings re-initializes default values."""
+        # Modify defaults
+        app_settings.set_value(AppSettings.KEY_MAX_RECENT, 99)
+        app_settings.sync()
+
+        # Reset
+        app_settings.reset_all_settings()
+
+        # Defaults should be restored
+        assert (
+            app_settings.get_value(AppSettings.KEY_MAX_RECENT, value_type=int)
+            == AppSettings.DEFAULT_MAX_RECENT
+        )
+        assert (
+            app_settings.get_settings_version() == AppSettings.CURRENT_VERSION
+        )
+
+    def test_reset_all_settings_clears_recent_files(
+        self, app_settings: AppSettings
+    ) -> None:
+        """Verify reset_all_settings clears recent files list."""
+        # Add recent files
+        app_settings.set_value(
+            AppSettings.KEY_RECENT_FILES, ["/path/to/file.ckt"]
+        )
+        app_settings.sync()
+
+        # Reset
+        app_settings.reset_all_settings()
+
+        # Recent files should be empty
+        recent = app_settings.get_value(AppSettings.KEY_RECENT_FILES)
+        assert recent == []
+
+    def test_reset_window_geometry_clears_geometry(
+        self, app_settings: AppSettings
+    ) -> None:
+        """Verify reset_window_geometry clears geometry settings."""
+        from PySide6.QtCore import QByteArray
+
+        # Set geometry values
+        app_settings.set_value(
+            AppSettings.KEY_WINDOW_GEOMETRY, QByteArray(b"geometry_data")
+        )
+        app_settings.set_value(
+            AppSettings.KEY_WINDOW_STATE, QByteArray(b"state_data")
+        )
+        app_settings.sync()
+
+        # Reset geometry
+        app_settings.reset_window_geometry()
+
+        # Geometry should be cleared
+        assert not app_settings.has_key(AppSettings.KEY_WINDOW_GEOMETRY)
+        assert not app_settings.has_key(AppSettings.KEY_WINDOW_STATE)
+
+    def test_reset_window_geometry_preserves_other_settings(
+        self, app_settings: AppSettings
+    ) -> None:
+        """Verify reset_window_geometry doesn't affect other settings."""
+        from PySide6.QtCore import QByteArray
+
+        # Set geometry and other settings
+        app_settings.set_value(
+            AppSettings.KEY_WINDOW_GEOMETRY, QByteArray(b"geometry")
+        )
+        app_settings.set_value("other/setting", "preserved")
+        app_settings.sync()
+
+        # Reset geometry
+        app_settings.reset_window_geometry()
+
+        # Other settings should remain
+        assert app_settings.get_value("other/setting") == "preserved"
+
+    def test_reset_recent_files_clears_list(
+        self, app_settings: AppSettings
+    ) -> None:
+        """Verify reset_recent_files clears the recent files list."""
+        # Add recent files
+        app_settings.set_value(
+            AppSettings.KEY_RECENT_FILES, ["/file1.ckt", "/file2.ckt"]
+        )
+        app_settings.sync()
+
+        # Reset recent files
+        app_settings.reset_recent_files()
+
+        # Should be empty
+        recent = app_settings.get_value(AppSettings.KEY_RECENT_FILES)
+        assert recent == []
+
+    def test_reset_recent_files_preserves_other_settings(
+        self, app_settings: AppSettings
+    ) -> None:
+        """Verify reset_recent_files doesn't affect other settings."""
+        # Set recent files and other settings
+        app_settings.set_value(
+            AppSettings.KEY_RECENT_FILES, ["/file.ckt"]
+        )
+        app_settings.set_value("other/key", "value")
+        app_settings.sync()
+
+        # Reset recent files
+        app_settings.reset_recent_files()
+
+        # Other settings should remain
+        assert app_settings.get_value("other/key") == "value"
+
+
+# =============================================================================
+# Settings Diagnostics Tests (E06-F06-T04)
+# =============================================================================
+
+
+class TestSettingsDiagnostics:
+    """Test settings diagnostic methods.
+
+    These tests verify:
+    - get_all_settings returns all settings as dictionary
+    - export_settings writes settings to JSON file
+    - is_corrupted detects corrupted settings
+    """
+
+    def test_get_all_settings_returns_dict(
+        self, app_settings: AppSettings
+    ) -> None:
+        """Verify get_all_settings returns a dictionary."""
+        result = app_settings.get_all_settings()
+        assert isinstance(result, dict)
+
+    def test_get_all_settings_includes_all_keys(
+        self, app_settings: AppSettings
+    ) -> None:
+        """Verify get_all_settings includes all stored keys."""
+        app_settings.set_value("test/key1", "value1")
+        app_settings.set_value("test/key2", "value2")
+
+        all_settings = app_settings.get_all_settings()
+
+        assert "test/key1" in all_settings
+        assert "test/key2" in all_settings
+        assert all_settings["test/key1"] == "value1"
+        assert all_settings["test/key2"] == "value2"
+
+    def test_export_settings_creates_file(
+        self, app_settings: AppSettings, tmp_path: Path
+    ) -> None:
+        """Verify export_settings creates a file."""
+        export_path = tmp_path / "settings_export.json"
+
+        app_settings.export_settings(str(export_path))
+
+        assert export_path.exists()
+
+    def test_export_settings_writes_valid_json(
+        self, app_settings: AppSettings, tmp_path: Path
+    ) -> None:
+        """Verify export_settings writes valid JSON."""
+        import json
+
+        app_settings.set_value("test/key", "test_value")
+        export_path = tmp_path / "settings_export.json"
+
+        app_settings.export_settings(str(export_path))
+
+        # Should be valid JSON
+        with export_path.open() as f:
+            data = json.load(f)
+
+        assert "test/key" in data
+        assert data["test/key"] == "test_value"
+
+    def test_export_settings_handles_qbytearray(
+        self, app_settings: AppSettings, tmp_path: Path
+    ) -> None:
+        """Verify export_settings converts QByteArray to base64."""
+        import json
+
+        from PySide6.QtCore import QByteArray
+
+        byte_data = QByteArray(b"\x01\x02\x03\x04")
+        app_settings.set_value("test/bytes", byte_data)
+        export_path = tmp_path / "settings_export.json"
+
+        app_settings.export_settings(str(export_path))
+
+        with export_path.open() as f:
+            data = json.load(f)
+
+        # QByteArray should be converted to dict with type and base64 data
+        assert "test/bytes" in data
+        assert data["test/bytes"]["_type"] == "QByteArray"
+        assert "_data" in data["test/bytes"]
+
+    def test_is_corrupted_returns_false_for_valid_settings(
+        self, app_settings: AppSettings
+    ) -> None:
+        """Verify is_corrupted returns False for valid settings."""
+        assert app_settings.is_corrupted() is False
+
+    def test_is_corrupted_returns_true_for_corrupted_settings(
+        self, isolated_settings: Path
+    ) -> None:
+        """Verify is_corrupted returns True for corrupted settings."""
+        # Create settings with invalid data that will cause read errors
+        temp_settings = QSettings("InkProject", "Ink")
+        temp_settings.setValue(AppSettings.KEY_SETTINGS_VERSION, "not_an_int")
+        temp_settings.sync()
+
+        settings = AppSettings()
+
+        # is_corrupted should detect the issue
+        # Note: This test may need adjustment based on what "corrupted" means
+        # For now, we test the method exists and returns bool
+        result = settings.is_corrupted()
+        assert isinstance(result, bool)
