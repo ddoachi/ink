@@ -1,0 +1,238 @@
+[project]
+name = "ink"
+version = "0.1.0"
+description = "Ink - Incremental Schematic Viewer for gate-level netlists"
+readme = "README.md"
+license = { text = "PRIVATE" }
+requires-python = ">=3.10"
+authors = [{ name = "Ink Team" }]
+dependencies = [
+    "PySide6>=6.6.0",
+    "networkx>=3.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=8.0",
+    "pytest-qt>=4.4",
+    "pytest-cov>=4.1",
+    # Type checking - strict like TypeScript
+    "mypy>=1.8",
+    "pyright>=1.1.350",
+    # Linting
+    "ruff>=0.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ink"]
+
+# =============================================================================
+# STRICT TYPE CHECKING - TypeScript-level strictness
+# =============================================================================
+
+[tool.mypy]
+# Target Python version
+python_version = "3.10"
+
+# Strict mode enables most strict flags
+strict = true
+
+# Additional strict flags beyond 'strict = true'
+disallow_any_generics = true
+disallow_any_unimported = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+check_untyped_defs = true
+
+# Warnings
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+
+# Import handling
+no_implicit_reexport = true
+no_implicit_optional = true
+
+# Strictness
+strict_equality = true
+strict_concatenate = true
+extra_checks = true
+
+# Error messages
+show_error_codes = true
+show_column_numbers = true
+pretty = true
+
+# Paths
+mypy_path = ["src"]
+files = ["src", "tests"]
+exclude = ["build", ".venv"]
+
+# Per-module overrides for third-party libraries without stubs
+[[tool.mypy.overrides]]
+module = [
+    "PySide6.*",
+    "networkx.*",
+    "grandalf.*",
+]
+ignore_missing_imports = true
+
+# =============================================================================
+# PYRIGHT - Additional strict checking (used by VS Code Pylance)
+# =============================================================================
+
+[tool.pyright]
+# Include paths
+include = ["src", "tests"]
+exclude = ["**/__pycache__", ".venv", "build"]
+
+# Python configuration
+pythonVersion = "3.10"
+pythonPlatform = "Linux"
+
+# Type checking mode - strictest level (like TypeScript strict)
+typeCheckingMode = "strict"
+
+# Strict type checking flags (TypeScript equivalents noted)
+# These are all enabled by "strict" mode, but listed for clarity:
+
+# Like TS noImplicitAny
+reportMissingTypeStubs = "warning"
+reportUnknownMemberType = "warning"
+reportUnknownArgumentType = "warning"
+reportUnknownVariableType = "warning"
+reportUnknownLambdaType = "warning"
+reportUnknownParameterType = "warning"
+
+# Like TS strictNullChecks
+reportOptionalMemberAccess = "error"
+reportOptionalCall = "error"
+reportOptionalIterable = "error"
+reportOptionalContextManager = "error"
+reportOptionalOperand = "error"
+reportOptionalSubscript = "error"
+
+# Like TS noImplicitReturns
+reportReturnType = "error"
+
+# Like TS strictFunctionTypes
+reportGeneralTypeIssues = "error"
+reportArgumentType = "error"
+
+# Additional strict checks
+reportPrivateUsage = "error"
+reportTypeCommentUsage = "error"
+reportConstantRedefinition = "error"
+reportIncompatibleMethodOverride = "error"
+reportIncompatibleVariableOverride = "error"
+reportInconsistentConstructor = "error"
+reportOverlappingOverload = "error"
+reportUninitializedInstanceVariable = "warning"
+reportCallInDefaultInitializer = "warning"
+reportUnnecessaryIsInstance = "warning"
+reportUnnecessaryCast = "warning"
+reportUnnecessaryComparison = "warning"
+reportUnnecessaryContains = "warning"
+reportUnusedImport = "error"
+reportUnusedClass = "warning"
+reportUnusedFunction = "warning"
+reportUnusedVariable = "warning"
+reportDuplicateImport = "error"
+reportSelfClsParameterName = "error"
+reportImplicitStringConcatenation = "warning"
+reportInvalidStubStatement = "error"
+reportIncompleteStub = "warning"
+reportUnsupportedDunderAll = "warning"
+reportMissingParameterType = "error"
+reportMissingTypeArgument = "error"
+reportInvalidTypeVarUse = "error"
+reportPropertyTypeMismatch = "error"
+reportFunctionMemberAccess = "warning"
+reportMissingModuleSource = "warning"
+
+# =============================================================================
+# RUFF - Fast Python linter
+# =============================================================================
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+exclude = [".venv", "build", "__pycache__"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "PTH",    # flake8-use-pathlib
+    "ERA",    # eradicate (commented-out code)
+    "PL",     # Pylint
+    "RUF",    # Ruff-specific rules
+    "ANN",    # flake8-annotations (type annotation checks)
+    "D",      # pydocstyle (docstring checks)
+]
+ignore = [
+    "D100",   # Missing docstring in public module (we use __init__.py for packages)
+    "D104",   # Missing docstring in public package
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D103", "ANN201", "PLR2004"]  # Allow missing docstrings and magic values in tests
+
+# =============================================================================
+# PYTEST
+# =============================================================================
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+# =============================================================================
+# COVERAGE
+# =============================================================================
+
+[tool.coverage.run]
+source = ["src/ink"]
+branch = true
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
