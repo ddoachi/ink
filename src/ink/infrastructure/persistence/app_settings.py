@@ -26,10 +26,12 @@ See Also:
 
 from __future__ import annotations
 
+import base64
+import json
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QByteArray, QSettings
 
 
 class AppSettings:
@@ -115,10 +117,19 @@ class AppSettings:
         On first run, default values are initialized to ensure consistent
         application state. This is detected by checking for the presence
         of the KEY_SETTINGS_VERSION key.
+
+        The initialization process:
+        1. Create QSettings instance
+        2. Check if migration is needed (stored version < current version)
+        3. Apply migrations sequentially if needed
+        4. Initialize defaults if first run
         """
         # Create QSettings with organization and application names.
         # These names determine the storage location path.
         self.settings = QSettings("InkProject", "Ink")
+
+        # Check and migrate settings if needed (must run before defaults)
+        self._migrate_if_needed()
 
         # Initialize default values on first run
         self._initialize_defaults()
@@ -127,8 +138,9 @@ class AppSettings:
         """Initialize default settings on first run.
 
         This method is called during __init__ to set up default values
-        when the application runs for the first time (detected by the
-        absence of KEY_SETTINGS_VERSION).
+        when the application runs for the first time or after migration.
+        It only sets values for keys that don't already exist, preserving
+        any existing user preferences.
 
         Default values include:
         - Settings version for migration tracking
@@ -139,16 +151,125 @@ class AppSettings:
         that all expected keys exist, preventing None checks throughout
         the codebase.
         """
-        # Check if this is first run by looking for version key
-        if not self.has_key(self.KEY_SETTINGS_VERSION):
-            # First run - set all default values
-            self.set_value(self.KEY_SETTINGS_VERSION, self.CURRENT_VERSION)
-            self.set_value(self.KEY_MAX_RECENT, self.DEFAULT_MAX_RECENT)
-            self.set_value(self.KEY_RECENT_FILES, [])
+        needs_sync = False
 
-            # Force write to disk to ensure defaults persist even if
-            # application crashes before normal shutdown
+        # Set version if not present (first run or corrupted)
+        if not self.has_key(self.KEY_SETTINGS_VERSION):
+            self.set_value(self.KEY_SETTINGS_VERSION, self.CURRENT_VERSION)
+            needs_sync = True
+
+        # Set max recent files if not present
+        if not self.has_key(self.KEY_MAX_RECENT):
+            self.set_value(self.KEY_MAX_RECENT, self.DEFAULT_MAX_RECENT)
+            needs_sync = True
+
+        # Set empty recent files list if not present
+        if not self.has_key(self.KEY_RECENT_FILES):
+            self.set_value(self.KEY_RECENT_FILES, [])
+            needs_sync = True
+
+        # Force write to disk to ensure defaults persist even if
+        # application crashes before normal shutdown
+        if needs_sync:
             self.sync()
+
+    # =========================================================================
+    # Settings Migration Framework
+    # =========================================================================
+    # These methods provide a forward-compatible migration system for handling
+    # settings schema changes across application versions. Migrations are
+    # applied sequentially: v0→v1, v1→v2, etc.
+
+    def _migrate_if_needed(self) -> None:
+        """Check and migrate settings from older versions if needed.
+
+        This method is called during initialization to ensure settings
+        are up-to-date with the current schema. It compares the stored
+        version against CURRENT_VERSION and applies migrations sequentially.
+
+        Migration Strategy:
+        - Stored version 0 means pre-versioning or fresh install
+        - Each version increment has a corresponding _migrate_vN_to_vM method
+        - Migrations are applied in order (0→1, 1→2, 2→3, etc.)
+        - After migration, version is updated and synced to disk
+
+        This approach ensures:
+        - Users upgrading from any old version get all necessary migrations
+        - Each migration is isolated and testable
+        - New migrations can be added without modifying existing ones
+        """
+        stored_version = self.get_value(self.KEY_SETTINGS_VERSION, 0, value_type=int)
+
+        if stored_version < self.CURRENT_VERSION:
+            # Apply migrations sequentially from stored version to current
+            self._migrate_settings(stored_version, self.CURRENT_VERSION)
+
+            # Update stored version after successful migration
+            self.set_value(self.KEY_SETTINGS_VERSION, self.CURRENT_VERSION)
+            self.sync()
+
+    def _migrate_settings(self, from_version: int, to_version: int) -> None:
+        """Perform settings migration between versions.
+
+        Applies migrations sequentially from from_version to to_version.
+        Each migration step is handled by a method named _migrate_vN_to_vM.
+
+        Args:
+            from_version: Source settings version (0 = no settings/pre-versioning)
+            to_version: Target settings version (usually CURRENT_VERSION)
+
+        Migration methods should:
+        - Rename keys if needed (copy value, delete old key)
+        - Convert data formats if schema changed
+        - Handle missing keys gracefully (they may not exist)
+        - NOT sync to disk (caller handles that after all migrations)
+
+        Example:
+            If from_version=0 and to_version=3, this calls:
+            - _migrate_v0_to_v1()
+            - _migrate_v1_to_v2()
+            - _migrate_v2_to_v3()
+        """
+        for version in range(from_version, to_version):
+            # Build method name for this migration step
+            migration_method = f"_migrate_v{version}_to_v{version + 1}"
+
+            # Call the migration method if it exists
+            if hasattr(self, migration_method):
+                getattr(self, migration_method)()
+
+    def _migrate_v0_to_v1(self) -> None:
+        """Migrate from version 0 (pre-versioning) to version 1.
+
+        Version 1 is the initial versioned schema. No data transformation
+        is needed - this migration simply establishes the baseline.
+
+        This method exists to:
+        - Document what version 1 contains
+        - Provide a template for future migrations
+        - Allow testing the migration framework
+        """
+        # Version 1 is the initial schema - no changes needed
+        # Future migrations will transform data here
+        pass
+
+    def get_settings_version(self) -> int:
+        """Get current settings schema version.
+
+        Returns the version number stored in settings, which indicates
+        what schema version the settings conform to. This is used by
+        the migration framework to determine what migrations to apply.
+
+        Returns:
+            Settings version number (0 if not set, indicating pre-versioning)
+
+        Example:
+            >>> settings = AppSettings()
+            >>> settings.get_settings_version()
+            1
+        """
+        version = self.get_value(self.KEY_SETTINGS_VERSION, 0, value_type=int)
+        return int(version) if version is not None else 0
 
     def get_value(
         self, key: str, default: Any = None, value_type: type | None = None
@@ -318,7 +439,7 @@ class AppSettings:
         self.settings.sync()
 
     # =========================================================================
-    # Recent Files Management Methods
+    # Recent Files Management Methods (E06-F06-T03)
     # =========================================================================
     # These methods manage the list of recently opened files, providing:
     # - Adding files to the list (with move-to-front for duplicates)
@@ -509,3 +630,362 @@ class AppSettings:
         recent = self._get_raw_recent_files()
         if len(recent) > max_count:
             self.set_value(self.KEY_RECENT_FILES, recent[:max_count])
+
+    # =========================================================================
+    # Window Geometry Persistence Methods (E06-F06-T02)
+    # =========================================================================
+    # These methods provide type-safe save/load operations for window geometry
+    # and state, wrapping QByteArray data from QMainWindow.saveGeometry() and
+    # saveState().
+
+    def save_window_geometry(self, geometry: QByteArray) -> None:
+        """Save window geometry (size, position, screen info).
+
+        Stores the geometry data returned by QMainWindow.saveGeometry().
+        This includes:
+        - Window size (width, height)
+        - Window position on screen (x, y)
+        - Screen number (for multi-monitor setups)
+        - Window flags and state (maximized, minimized, etc.)
+
+        Args:
+            geometry: Window geometry from QMainWindow.saveGeometry().
+                      Must be a QByteArray containing the serialized geometry.
+
+        Example:
+            >>> from PySide6.QtCore import QByteArray
+            >>> settings = AppSettings()
+            >>> # In your MainWindow:
+            >>> settings.save_window_geometry(self.saveGeometry())
+
+        See Also:
+            - load_window_geometry() for retrieving saved geometry
+            - save_window_state() for dock widget layout
+            - Qt documentation on QMainWindow.saveGeometry()
+        """
+        self.set_value(self.KEY_WINDOW_GEOMETRY, geometry)
+
+    def load_window_geometry(self) -> QByteArray | None:
+        """Load window geometry (size, position, screen info).
+
+        Retrieves the geometry data previously saved with save_window_geometry().
+        Returns None if no geometry is saved or if the stored data is invalid
+        (not a QByteArray).
+
+        Returns:
+            QByteArray containing window geometry data, or None if:
+            - No geometry has been saved yet (first run)
+            - Stored data is corrupted or not a QByteArray
+
+        Example:
+            >>> settings = AppSettings()
+            >>> geometry = settings.load_window_geometry()
+            >>> if geometry:
+            ...     self.restoreGeometry(geometry)
+            ... else:
+            ...     # Use defaults
+            ...     self.resize(1280, 800)
+
+        See Also:
+            - save_window_geometry() for storing geometry
+            - has_window_geometry() to check if geometry exists
+        """
+        geometry = self.get_value(self.KEY_WINDOW_GEOMETRY)
+        # Validate type - QSettings may return other types if data is corrupted
+        return geometry if isinstance(geometry, QByteArray) else None
+
+    def save_window_state(self, state: QByteArray) -> None:
+        """Save window state (dock widget layout, toolbars).
+
+        Stores the state data returned by QMainWindow.saveState().
+        This includes:
+        - Dock widget positions (left, right, bottom, top areas)
+        - Dock widget sizes
+        - Dock widget visibility
+        - Dock widget floating state
+        - Toolbar positions
+        - Main window state version (for compatibility)
+
+        Args:
+            state: Window state from QMainWindow.saveState().
+                   Must be a QByteArray containing the serialized state.
+
+        Example:
+            >>> from PySide6.QtCore import QByteArray
+            >>> settings = AppSettings()
+            >>> # In your MainWindow:
+            >>> settings.save_window_state(self.saveState())
+
+        See Also:
+            - load_window_state() for retrieving saved state
+            - save_window_geometry() for window size/position
+            - Qt documentation on QMainWindow.saveState()
+        """
+        self.set_value(self.KEY_WINDOW_STATE, state)
+
+    def load_window_state(self) -> QByteArray | None:
+        """Load window state (dock widget layout, toolbars).
+
+        Retrieves the state data previously saved with save_window_state().
+        Returns None if no state is saved or if the stored data is invalid
+        (not a QByteArray).
+
+        Returns:
+            QByteArray containing window state data, or None if:
+            - No state has been saved yet (first run)
+            - Stored data is corrupted or not a QByteArray
+
+        Example:
+            >>> settings = AppSettings()
+            >>> state = settings.load_window_state()
+            >>> if state:
+            ...     self.restoreState(state)
+
+        See Also:
+            - save_window_state() for storing state
+            - has_window_state() to check if state exists
+        """
+        state = self.get_value(self.KEY_WINDOW_STATE)
+        # Validate type - QSettings may return other types if data is corrupted
+        return state if isinstance(state, QByteArray) else None
+
+    def has_window_geometry(self) -> bool:
+        """Check if window geometry has been saved.
+
+        Useful for determining if this is the first run (no saved geometry)
+        and deciding whether to use default geometry or restore saved geometry.
+
+        Returns:
+            True if window geometry exists in settings, False otherwise.
+
+        Example:
+            >>> settings = AppSettings()
+            >>> if settings.has_window_geometry():
+            ...     self.restoreGeometry(settings.load_window_geometry())
+            ... else:
+            ...     # First run - use defaults
+            ...     self.resize(1280, 800)
+            ...     self._center_on_screen()
+
+        See Also:
+            - load_window_geometry() to retrieve the geometry
+            - has_window_state() to check for dock widget state
+        """
+        return self.has_key(self.KEY_WINDOW_GEOMETRY)
+
+    def has_window_state(self) -> bool:
+        """Check if window state has been saved.
+
+        Useful for determining if dock widget layout state exists
+        before attempting to restore it.
+
+        Returns:
+            True if window state exists in settings, False otherwise.
+
+        Example:
+            >>> settings = AppSettings()
+            >>> if settings.has_window_state():
+            ...     self.restoreState(settings.load_window_state())
+
+        See Also:
+            - load_window_state() to retrieve the state
+            - has_window_geometry() to check for window geometry
+        """
+        return self.has_key(self.KEY_WINDOW_STATE)
+
+    # =========================================================================
+    # Settings Reset Methods (E06-F06-T04)
+    # =========================================================================
+    # These methods provide ways to reset settings to defaults. Useful for
+    # troubleshooting, user preferences, or recovering from corrupted state.
+
+    def reset_all_settings(self) -> None:
+        """Reset all settings to defaults.
+
+        Clears all stored settings and re-initializes with default values.
+        This is the nuclear option for settings recovery - useful when:
+        - User wants to start fresh
+        - Settings appear corrupted
+        - Troubleshooting persistent issues
+
+        After reset, the settings will contain:
+        - Current version number
+        - Default max recent files
+        - Empty recent files list
+        - No window geometry (will use system defaults)
+
+        Note:
+            This does NOT require application restart to take effect for
+            the current AppSettings instance. However, UI elements that
+            read settings at startup (like window geometry) will need a
+            restart to reflect the reset.
+
+        Example:
+            >>> settings = AppSettings()
+            >>> settings.set_value("custom/key", "value")
+            >>> settings.reset_all_settings()
+            >>> settings.has_key("custom/key")
+            False
+        """
+        # Clear all settings from storage
+        self.settings.clear()
+
+        # Re-initialize defaults (version, max recent, empty recent list)
+        # We need to force initialization by temporarily clearing the version check
+        self.set_value(self.KEY_SETTINGS_VERSION, self.CURRENT_VERSION)
+        self.set_value(self.KEY_MAX_RECENT, self.DEFAULT_MAX_RECENT)
+        self.set_value(self.KEY_RECENT_FILES, [])
+
+        # Persist changes immediately
+        self.sync()
+
+    def reset_window_geometry(self) -> None:
+        """Reset only window geometry and state.
+
+        Clears window position, size, and state (maximized, etc.) while
+        preserving all other settings. Useful when:
+        - Window is positioned off-screen
+        - Window state is corrupted
+        - User wants to reset layout without losing other preferences
+
+        After reset, the application will use default window size on
+        next restart.
+
+        Example:
+            >>> settings = AppSettings()
+            >>> settings.reset_window_geometry()
+            >>> settings.has_key(AppSettings.KEY_WINDOW_GEOMETRY)
+            False
+        """
+        self.remove_key(self.KEY_WINDOW_GEOMETRY)
+        self.remove_key(self.KEY_WINDOW_STATE)
+        self.sync()
+
+    def reset_recent_files(self) -> None:
+        """Reset recent files list.
+
+        Clears the list of recently opened files while preserving all
+        other settings. Useful when:
+        - Recent files list contains deleted files
+        - User wants to clear file history
+        - File paths have changed (e.g., after moving project)
+
+        Example:
+            >>> settings = AppSettings()
+            >>> settings.reset_recent_files()
+            >>> settings.get_value(AppSettings.KEY_RECENT_FILES)
+            []
+        """
+        self.set_value(self.KEY_RECENT_FILES, [])
+        self.sync()
+
+    # =========================================================================
+    # Settings Diagnostics (E06-F06-T04)
+    # =========================================================================
+    # These methods help with debugging, support, and troubleshooting by
+    # exposing settings internals in a safe way.
+
+    def get_all_settings(self) -> dict[str, Any]:
+        """Get all settings as dictionary.
+
+        Returns a dictionary containing all stored settings with their
+        current values. This is useful for:
+        - Debugging settings issues
+        - Support and diagnostics
+        - Settings comparison
+        - Backup before reset
+
+        Returns:
+            Dictionary mapping setting keys to their values.
+            Values are returned as-is (no type conversion).
+
+        Example:
+            >>> settings = AppSettings()
+            >>> settings.set_value("test/key", "value")
+            >>> all_settings = settings.get_all_settings()
+            >>> "test/key" in all_settings
+            True
+        """
+        result: dict[str, Any] = {}
+        for key in self.settings.allKeys():
+            result[key] = self.settings.value(key)
+        return result
+
+    def export_settings(self, file_path: str) -> None:
+        """Export settings to JSON file.
+
+        Exports all settings to a JSON file for backup, debugging, or
+        sharing. Handles QByteArray values (like window geometry) by
+        converting them to base64-encoded strings.
+
+        Args:
+            file_path: Path to the output JSON file. Will be overwritten
+                      if it already exists.
+
+        Raises:
+            OSError: If the file cannot be written.
+
+        The exported JSON format:
+        - String/int/bool values are stored directly
+        - QByteArray values are stored as {"_type": "QByteArray", "_data": "<base64>"}
+        - List values are stored as JSON arrays
+
+        Example:
+            >>> settings = AppSettings()
+            >>> settings.export_settings("/tmp/settings_backup.json")
+        """
+        settings_dict = self.get_all_settings()
+
+        # Convert QByteArray values to base64 for JSON serialization
+        # QByteArray is used for binary data like window geometry
+        for key, value in settings_dict.items():
+            if isinstance(value, QByteArray):
+                # Convert QByteArray to bytes using data() method
+                settings_dict[key] = {
+                    "_type": "QByteArray",
+                    "_data": base64.b64encode(value.data()).decode("utf-8"),
+                }
+
+        with Path(file_path).open("w") as f:
+            json.dump(settings_dict, f, indent=2)
+
+    def is_corrupted(self) -> bool:
+        """Check if settings appear corrupted.
+
+        Performs basic sanity checks on critical settings to detect
+        corruption. This is useful at startup to offer users a recovery
+        option.
+
+        Checks performed:
+        - Settings version can be read as integer
+        - Recent files list can be read
+
+        Returns:
+            True if settings appear corrupted, False if they seem valid.
+
+        Note:
+            This is a heuristic check. Some corruption may not be detected,
+            and some valid but unusual settings may trigger false positives.
+            Use in combination with user judgment.
+
+        Example:
+            >>> settings = AppSettings()
+            >>> if settings.is_corrupted():
+            ...     print("Settings may be corrupted")
+        """
+        try:
+            # Try to read critical settings that should always exist
+            # after initialization. If these fail, settings are likely corrupted.
+
+            # Version should be readable as an integer
+            version = self.get_value(self.KEY_SETTINGS_VERSION, value_type=int)
+            if version is None or not isinstance(version, int):
+                return True
+
+            # Recent files should be readable (may be empty list or None)
+            self.get_value(self.KEY_RECENT_FILES)
+
+            return False
+        except Exception:
+            # Any exception during read indicates corruption
+            return True

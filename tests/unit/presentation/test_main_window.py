@@ -132,29 +132,31 @@ class TestInkMainWindowTitle:
 class TestInkMainWindowSize:
     """Tests for window size configuration."""
 
-    def test_window_default_width_is_1600(
+    def test_window_default_width_is_1280(
         self, qtbot: QtBot, app_settings: AppSettings
     ) -> None:
-        """Test default window width is 1600 pixels.
+        """Test default window width is 1280 pixels (geometry persistence default).
 
-        1600px optimized for 1080p displays (leaves room for taskbar).
+        With geometry persistence enabled, the window uses smaller defaults
+        (1280x800) for first run, leaving room for users to resize.
         """
         window = InkMainWindow(app_settings)
         qtbot.addWidget(window)
 
-        assert window.width() == 1600
+        assert window.width() == 1280
 
-    def test_window_default_height_is_900(
+    def test_window_default_height_is_800(
         self, qtbot: QtBot, app_settings: AppSettings
     ) -> None:
-        """Test default window height is 900 pixels.
+        """Test default window height is 800 pixels (geometry persistence default).
 
-        900px provides ample canvas while fitting on 1080p displays.
+        With geometry persistence enabled, the window uses smaller defaults
+        (1280x800) for first run, leaving room for users to resize.
         """
         window = InkMainWindow(app_settings)
         qtbot.addWidget(window)
 
-        assert window.height() == 900
+        assert window.height() == 800
 
     def test_window_minimum_width_is_1024(
         self, qtbot: QtBot, app_settings: AppSettings
