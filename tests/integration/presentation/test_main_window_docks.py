@@ -15,12 +15,14 @@ See Also:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import QApplication, QDockWidget
 
+from ink.infrastructure.persistence.app_settings import AppSettings
 from ink.presentation.main_window import InkMainWindow
 from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
 
@@ -44,13 +46,51 @@ def qapp() -> Generator[QApplication, None, None]:
 
 
 @pytest.fixture
-def window(qapp: QApplication) -> Generator[InkMainWindow, None, None]:
+def isolated_settings(tmp_path: Path) -> Generator[Path, None, None]:
+    """Redirect QSettings to temporary directory for test isolation.
+
+    Uses QSettings.setPath() to redirect INI file storage to a temp
+    directory. This ensures tests don't affect real user settings and
+    each test run starts with a clean slate.
+
+    Yields:
+        Path to the temporary settings directory.
+    """
+    settings_path = tmp_path / "settings"
+    settings_path.mkdir(exist_ok=True)
+
+    QSettings.setPath(
+        QSettings.Format.IniFormat,
+        QSettings.Scope.UserScope,
+        str(settings_path),
+    )
+
+    yield settings_path
+
+
+@pytest.fixture
+def app_settings(isolated_settings: Path) -> AppSettings:  # noqa: ARG001
+    """Create AppSettings instance for testing.
+
+    Args:
+        isolated_settings: Temporary settings directory (ensures isolation).
+
+    Returns:
+        Fresh AppSettings instance.
+    """
+    return AppSettings()
+
+
+@pytest.fixture
+def window(
+    qapp: QApplication, app_settings: AppSettings  # noqa: ARG001
+) -> Generator[InkMainWindow, None, None]:
     """Create main window for each test and cleanup after.
 
     Each test gets a fresh window instance to avoid state pollution
     between tests. Window is closed after test completes.
     """
-    win = InkMainWindow()
+    win = InkMainWindow(app_settings)
     yield win
     win.close()
 

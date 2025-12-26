@@ -13,24 +13,27 @@ Design Decisions:
     - SchematicCanvas as central widget provides primary workspace area
     - Three dock widgets for supporting panels (hierarchy, properties, messages)
     - Dock nesting enabled for complex layout configurations
-    - Optional AppSettings injection for geometry persistence and settings management
+    - AppSettings injected via constructor for testability and separation of concerns
+    - Recent files menu dynamically updated from AppSettings
 
 See Also:
     - Spec E06-F01-T01 for window shell requirements
     - Spec E06-F01-T02 for central widget requirements
     - Spec E06-F01-T03 for dock widget requirements
     - Spec E06-F06-T02 for window geometry persistence
+    - Spec E06-F06-T03 for recent files menu requirements
     - Spec E06-F06-T04 for settings migration and reset
     - Qt documentation on QMainWindow for extension points
 """
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QCloseEvent, QGuiApplication
-from PySide6.QtWidgets import QDockWidget, QMainWindow, QMenu, QMessageBox
+from PySide6.QtWidgets import QDockWidget, QFileDialog, QMainWindow, QMenu, QMessageBox
 
 from ink.presentation.canvas import SchematicCanvas
 from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
@@ -47,6 +50,7 @@ class InkMainWindow(QMainWindow):
     - Window title and identification
     - Default and minimum window sizing
     - Standard window decorations (minimize, maximize, close)
+    - File menu with Open and Recent Files functionality
     - Three dock widgets for supporting panels
     - Dock nesting for complex layout configurations
     - Window geometry persistence across sessions (when app_settings provided)
@@ -66,24 +70,21 @@ class InkMainWindow(QMainWindow):
         - message_dock: Bottom area - search results and logs
 
     Attributes:
+        app_settings: Application settings manager for recent files persistence.
         schematic_canvas: The central canvas widget for schematic visualization.
+        recent_files_menu: Submenu for displaying recent files.
         hierarchy_panel: Placeholder for hierarchy tree (full impl: E04-F01).
         hierarchy_dock: Dock widget containing hierarchy_panel.
         property_panel: Placeholder for property inspector (full impl: E04-F04).
         property_dock: Dock widget containing property_panel.
         message_panel: Placeholder for search/log panel (full impl: E04-F03).
         message_dock: Dock widget containing message_panel.
-        app_settings: Optional settings manager for geometry persistence and management.
 
     Example:
         >>> from ink.presentation.main_window import InkMainWindow
-        >>> window = InkMainWindow()
-        >>> window.show()
-
-        # With geometry persistence:
         >>> from ink.infrastructure.persistence.app_settings import AppSettings
         >>> settings = AppSettings()
-        >>> window = InkMainWindow(app_settings=settings)
+        >>> window = InkMainWindow(settings)
         >>> window.show()
 
     See Also:
@@ -92,18 +93,20 @@ class InkMainWindow(QMainWindow):
         - E06-F02: Menu system with View menu for panel toggling
         - E06-F05: Panel state persistence with QSettings
         - E06-F06-T02: Window geometry persistence
+        - E06-F06-T03: Recent files management (implemented here)
         - E06-F06-T04: Settings migration and reset functionality
     """
 
     # Instance attribute type hints for IDE/type checker support
+    app_settings: AppSettings
     schematic_canvas: SchematicCanvas
+    recent_files_menu: QMenu
     hierarchy_panel: HierarchyPanel
     hierarchy_dock: QDockWidget
     property_panel: PropertyPanel
     property_dock: QDockWidget
     message_panel: MessagePanel
     message_dock: QDockWidget
-    app_settings: AppSettings | None
 
     # Window configuration constants
     # These are class-level to make requirements explicit and testable
@@ -113,13 +116,16 @@ class InkMainWindow(QMainWindow):
     _MIN_WIDTH: int = 1024  # Common minimum for professional tools
     _MIN_HEIGHT: int = 768  # Supports 768p displays as minimum
 
+    # Maximum number of menu items that get keyboard shortcut (Alt+1 through Alt+9)
+    _MAX_SHORTCUT_ITEMS: int = 9
+
     # Geometry persistence defaults (E06-F06-T02 spec)
     # When using app_settings, these smaller defaults leave room for
     # users to resize window without feeling constrained
     _GEOMETRY_DEFAULT_WIDTH: int = 1280
     _GEOMETRY_DEFAULT_HEIGHT: int = 800
 
-    def __init__(self, app_settings: AppSettings | None = None) -> None:
+    def __init__(self, app_settings: AppSettings) -> None:
         """Initialize the main window with configured properties.
 
         Sets up window title, size constraints, decorations, central widget,
@@ -128,22 +134,24 @@ class InkMainWindow(QMainWindow):
         show() explicitly.
 
         Args:
-            app_settings: Optional settings manager for geometry persistence
-                          and settings management. If provided, geometry will
-                          be saved on close and restored on startup, and
-                          settings menu items will be enabled.
+            app_settings: Settings manager for geometry persistence,
+                          recent files, and settings management.
 
         Initialization order:
             1. Window properties (title, size, flags)
             2. Central widget (schematic canvas)
             3. Dock widgets (hierarchy, properties, messages)
-            4. Menu bar (Help > Settings)
-            5. Restore geometry (if app_settings provided)
+            4. Menu bar (File, Help > Settings)
+            5. Restore geometry (if saved)
+            6. Update recent files menu
 
         This order ensures dock widgets exist before restoreState() is called,
         as Qt requires dock widgets to be present for state restoration.
         """
         super().__init__()
+
+        # Store settings reference for recent files management and geometry
+        # This is injected rather than created here for testability
         self.app_settings = app_settings
 
         # Setup UI components BEFORE restoring geometry
@@ -154,8 +162,10 @@ class InkMainWindow(QMainWindow):
         self._setup_menus()
 
         # Restore geometry AFTER all widgets are created
-        if self.app_settings is not None:
-            self._restore_geometry()
+        self._restore_geometry()
+
+        # Initialize recent files menu with current list
+        self._update_recent_files_menu()
 
     def _setup_window(self) -> None:
         """Configure main window properties.
@@ -208,6 +218,254 @@ class InkMainWindow(QMainWindow):
         # This allows docks to be split horizontally or vertically within
         # a single dock area, enabling more flexible panel arrangements
         self.setDockNestingEnabled(True)
+
+    def _setup_menus(self) -> None:
+        """Set up application menu bar with File and Help menus.
+
+        Creates the main menu structure:
+        - File menu with Open, Open Recent submenu, and Exit actions
+        - Help menu with Settings submenu for settings management
+
+        Menu Structure:
+            File
+            ├── Open... (Ctrl+O)
+            ├── Open Recent ►
+            │   ├── 1. file1.ckt
+            │   ├── 2. file2.ckt
+            │   ├── ───────────
+            │   └── Clear Recent Files
+            ├── ─────────────
+            └── Exit (Ctrl+Q)
+
+            Help
+            ├── ─────────────
+            └── Settings ►
+                ├── Reset Window Layout
+                ├── Clear Recent Files
+                ├── ─────────────
+                ├── Reset All Settings...
+                ├── ─────────────
+                └── Show Settings File Location
+        """
+        menubar = self.menuBar()
+
+        # =================================================================
+        # File Menu
+        # =================================================================
+        file_menu = menubar.addMenu("&File")
+
+        # Open action - opens file dialog for netlist selection
+        open_action = file_menu.addAction("&Open...")
+        open_action.setShortcut("Ctrl+O")
+        open_action.triggered.connect(self._on_open_file_dialog)
+
+        # Recent files submenu - dynamically populated from settings
+        # Menu is stored as instance attribute for updates
+        self.recent_files_menu = file_menu.addMenu("Open &Recent")
+
+        file_menu.addSeparator()
+
+        # Exit action - closes the application
+        exit_action = file_menu.addAction("E&xit")
+        exit_action.setShortcut("Ctrl+Q")
+        exit_action.triggered.connect(self.close)
+
+        # =================================================================
+        # Help Menu
+        # =================================================================
+        help_menu = menubar.addMenu("&Help")
+
+        # Add separator before settings submenu
+        help_menu.addSeparator()
+
+        # Settings submenu for settings management
+        settings_menu = QMenu("&Settings", self)
+        help_menu.addMenu(settings_menu)
+
+        # Reset Window Layout action
+        reset_geometry_action = settings_menu.addAction("Reset Window Layout")
+        reset_geometry_action.triggered.connect(self._on_reset_geometry)
+
+        # Clear Recent Files action (in settings menu)
+        reset_recent_action = settings_menu.addAction("Clear Recent Files")
+        reset_recent_action.triggered.connect(self._on_clear_recent_files)
+
+        settings_menu.addSeparator()
+
+        # Reset All Settings action (destructive, at bottom with separator)
+        reset_all_action = settings_menu.addAction("Reset All Settings...")
+        reset_all_action.triggered.connect(self._on_reset_all_settings)
+
+        settings_menu.addSeparator()
+
+        # Show Settings File Location action (diagnostic)
+        show_settings_action = settings_menu.addAction("Show Settings File Location")
+        show_settings_action.triggered.connect(self._on_show_settings_location)
+
+    def _update_recent_files_menu(self) -> None:
+        """Update the recent files menu with current list from settings.
+
+        Rebuilds the entire recent files menu:
+        - Clears existing menu items
+        - Adds action for each recent file (numbered 1-9 with shortcuts)
+        - Adds separator and "Clear Recent Files" action
+        - Shows "No Recent Files" placeholder if list is empty
+
+        This method is called:
+        - At window initialization
+        - After opening a file
+        - After clicking a recent file
+        - After clearing recent files
+
+        Menu items for files 1-9 have keyboard shortcuts (Alt+1 through Alt+9)
+        via the & prefix in the menu text.
+        """
+        self.recent_files_menu.clear()
+
+        recent_files = self.app_settings.get_recent_files()
+
+        if recent_files:
+            # Add action for each recent file
+            for i, file_path in enumerate(recent_files):
+                # Format display name with numbering
+                display_name = self._format_recent_file_name(file_path, i)
+
+                action = self.recent_files_menu.addAction(display_name)
+
+                # Store full path in action data for retrieval on click
+                action.setData(file_path)
+
+                # Set tooltip to show full path on hover
+                action.setToolTip(file_path)
+
+                # Connect action to file open handler
+                # Using lambda with default argument to capture current file_path
+                # Note: checked parameter is required by Qt signal signature
+                action.triggered.connect(
+                    lambda _checked=False, path=file_path: self._on_open_recent_file(
+                        path
+                    )
+                )
+
+            self.recent_files_menu.addSeparator()
+
+            # Add "Clear Recent Files" action at the end
+            clear_action = self.recent_files_menu.addAction("Clear Recent Files")
+            clear_action.triggered.connect(self._on_clear_recent_files_from_menu)
+        else:
+            # Show "No Recent Files" placeholder when list is empty
+            no_files_action = self.recent_files_menu.addAction("No Recent Files")
+            no_files_action.setEnabled(False)  # Disabled, non-clickable
+
+    def _format_recent_file_name(self, file_path: str, index: int) -> str:
+        """Format a recent file path for menu display.
+
+        Creates a menu-friendly display name with:
+        - Number prefix (1-based)
+        - & shortcut for items 1-9 (allows Alt+1 through Alt+9)
+        - Just the filename (not full path)
+
+        Args:
+            file_path: Full absolute path to the file.
+            index: Zero-based index in the recent files list.
+
+        Returns:
+            Formatted display name, e.g., "&1. design.ckt" or "10. other.ckt"
+
+        Example:
+            >>> window._format_recent_file_name("/path/to/design.ckt", 0)
+            "&1. design.ckt"
+            >>> window._format_recent_file_name("/path/to/other.ckt", 9)
+            "10. other.ckt"
+        """
+        path = Path(file_path)
+
+        # Use 1-based numbering for menu display (more natural for users)
+        number = index + 1
+
+        # Files 1-9 get & shortcut prefix for Alt+N keyboard access
+        # File 10+ don't get shortcut (would require two-key shortcuts)
+        if number <= self._MAX_SHORTCUT_ITEMS:
+            return f"&{number}. {path.name}"
+        return f"{number}. {path.name}"
+
+    def _on_open_file_dialog(self) -> None:
+        """Handle File > Open action.
+
+        Opens a file dialog for the user to select a netlist file.
+        Supports .ckt, .cdl, and .sp file extensions.
+        If a file is selected, it is opened via _open_file().
+        """
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Netlist File",
+            "",  # Start in current/last directory
+            "Netlist Files (*.ckt *.cdl *.sp);;All Files (*)",
+        )
+
+        if file_path:
+            self._open_file(file_path)
+
+    def _on_open_recent_file(self, file_path: str) -> None:
+        """Handle clicking a recent file menu item.
+
+        Checks if the file still exists before attempting to open:
+        - If file exists: Opens it via _open_file()
+        - If file doesn't exist: Shows warning and updates menu
+
+        Args:
+            file_path: Absolute path to the file from the recent files list.
+        """
+        if Path(file_path).exists():
+            self._open_file(file_path)
+        else:
+            # File no longer exists - show warning to user
+            QMessageBox.warning(
+                self,
+                "File Not Found",
+                f"The file no longer exists:\n{file_path}",
+            )
+
+            # Refresh menu - get_recent_files() will auto-remove non-existent files
+            self._update_recent_files_menu()
+
+    def _open_file(self, file_path: str) -> None:
+        """Open a netlist file.
+
+        This is the central file opening method. All file opens (dialog,
+        recent menu, command line) should go through this method to ensure
+        consistent behavior:
+        1. Parse the netlist file (TODO: implement when CDLParser is ready)
+        2. Display on canvas (TODO: implement when canvas display is ready)
+        3. Add to recent files list
+        4. Update recent files menu
+        5. Update window title
+
+        Args:
+            file_path: Absolute path to the netlist file.
+
+        Note:
+            For MVP, actual netlist parsing is not implemented yet.
+            This method focuses on recent files management.
+        """
+        # Add file to recent files list (moves to front if already present)
+        self.app_settings.add_recent_file(file_path)
+
+        # Refresh the recent files menu to reflect the update
+        self._update_recent_files_menu()
+
+        # Update window title to show current file (format: "Ink - filename.ckt")
+        filename = Path(file_path).name
+        self.setWindowTitle(f"Ink - {filename}")
+
+    def _on_clear_recent_files_from_menu(self) -> None:
+        """Handle Clear Recent Files action from the recent files submenu.
+
+        Clears all entries from the recent files list and updates the menu
+        to show the empty state placeholder. No confirmation dialog.
+        """
+        self.app_settings.clear_recent_files()
+        self._update_recent_files_menu()
 
     def _setup_central_widget(self) -> None:
         """Create and configure the central schematic canvas.
@@ -397,54 +655,6 @@ class InkMainWindow(QMainWindow):
         self.message_dock.setMinimumHeight(100)
         self.message_panel.setMinimumSize(300, 100)
 
-    def _setup_menus(self) -> None:
-        """Set up the application menu bar.
-
-        Creates the menu structure:
-        - Help menu with Settings submenu for managing application settings
-
-        The Settings menu provides:
-        - Reset Window Layout: Clears saved window geometry
-        - Clear Recent Files: Clears the recent files list
-        - Reset All Settings: Resets everything to defaults (with confirmation)
-        - Show Settings File Location: Shows where settings are stored
-        """
-        menubar = self.menuBar()
-
-        # Help menu (rightmost, as per convention)
-        help_menu = menubar.addMenu("&Help")
-
-        # Add separator before settings submenu
-        help_menu.addSeparator()
-
-        # Settings submenu for settings management
-        settings_menu = QMenu("&Settings", self)
-        help_menu.addMenu(settings_menu)
-
-        # Reset Window Layout action
-        reset_geometry_action = settings_menu.addAction("Reset Window Layout")
-        reset_geometry_action.triggered.connect(self._on_reset_geometry)
-        reset_geometry_action.setEnabled(self.app_settings is not None)
-
-        # Clear Recent Files action
-        reset_recent_action = settings_menu.addAction("Clear Recent Files")
-        reset_recent_action.triggered.connect(self._on_clear_recent_files)
-        reset_recent_action.setEnabled(self.app_settings is not None)
-
-        settings_menu.addSeparator()
-
-        # Reset All Settings action (destructive, at bottom with separator)
-        reset_all_action = settings_menu.addAction("Reset All Settings...")
-        reset_all_action.triggered.connect(self._on_reset_all_settings)
-        reset_all_action.setEnabled(self.app_settings is not None)
-
-        settings_menu.addSeparator()
-
-        # Show Settings File Location action (diagnostic)
-        show_settings_action = settings_menu.addAction("Show Settings File Location")
-        show_settings_action.triggered.connect(self._on_show_settings_location)
-        show_settings_action.setEnabled(self.app_settings is not None)
-
     # =========================================================================
     # Window Geometry Persistence (E06-F06-T02)
     # =========================================================================
@@ -467,9 +677,6 @@ class InkMainWindow(QMainWindow):
         - Resolution changes (window would be off-screen)
         - Corrupted data (returns False, no crash)
         """
-        if self.app_settings is None:
-            return
-
         # Restore geometry (size, position, maximized state)
         geometry = self.app_settings.load_window_geometry()
         if geometry is not None and not geometry.isEmpty():
@@ -529,9 +736,6 @@ class InkMainWindow(QMainWindow):
         After saving, sync() is called to force immediate write to disk,
         ensuring data is not lost if the system crashes after closing.
         """
-        if self.app_settings is None:
-            return
-
         # Save current geometry and state
         self.app_settings.save_window_geometry(self.saveGeometry())
         self.app_settings.save_window_state(self.saveState())
@@ -565,9 +769,6 @@ class InkMainWindow(QMainWindow):
         Clears the saved window geometry and state, then informs the user
         that a restart is required for changes to take effect.
         """
-        if self.app_settings is None:
-            return
-
         reply = QMessageBox.question(
             self,
             "Reset Window Layout",
@@ -586,13 +787,10 @@ class InkMainWindow(QMainWindow):
             )
 
     def _on_clear_recent_files(self) -> None:
-        """Handle Clear Recent Files action.
+        """Handle Clear Recent Files action from Help > Settings menu.
 
-        Clears the recent files list immediately without requiring restart.
+        Clears the recent files list with confirmation dialog.
         """
-        if self.app_settings is None:
-            return
-
         reply = QMessageBox.question(
             self,
             "Clear Recent Files",
@@ -602,6 +800,7 @@ class InkMainWindow(QMainWindow):
 
         if reply == QMessageBox.StandardButton.Yes:
             self.app_settings.reset_recent_files()
+            self._update_recent_files_menu()
             QMessageBox.information(
                 self,
                 "Recent Files Cleared",
@@ -614,9 +813,6 @@ class InkMainWindow(QMainWindow):
         Shows a confirmation dialog with details about what will be reset,
         then resets all settings if confirmed. Informs user about restart.
         """
-        if self.app_settings is None:
-            return
-
         reply = QMessageBox.question(
             self,
             "Reset All Settings",
@@ -632,6 +828,7 @@ class InkMainWindow(QMainWindow):
 
         if reply == QMessageBox.StandardButton.Yes:
             self.app_settings.reset_all_settings()
+            self._update_recent_files_menu()
             QMessageBox.information(
                 self,
                 "Settings Reset",
@@ -645,9 +842,6 @@ class InkMainWindow(QMainWindow):
         Displays an information dialog showing where settings are stored.
         Useful for debugging and support purposes.
         """
-        if self.app_settings is None:
-            return
-
         settings_path = self.app_settings.get_settings_file_path()
 
         QMessageBox.information(
