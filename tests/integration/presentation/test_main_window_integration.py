@@ -521,6 +521,34 @@ class TestMenuIntegration:
 # =============================================================================
 
 
+class TestUIPolish:
+    """Test UI polish styling is applied."""
+
+    def test_window_has_stylesheet(self, main_window: InkMainWindow) -> None:
+        """Test main window has a stylesheet applied."""
+        stylesheet = main_window.styleSheet()
+        assert stylesheet is not None
+        assert len(stylesheet) > 0
+
+    def test_stylesheet_contains_splitter_styling(
+        self, main_window: InkMainWindow
+    ) -> None:
+        """Test stylesheet includes splitter handle styling."""
+        stylesheet = main_window.styleSheet()
+        assert "QSplitter::handle" in stylesheet
+
+    def test_stylesheet_contains_dock_styling(
+        self, main_window: InkMainWindow
+    ) -> None:
+        """Test stylesheet includes dock widget styling."""
+        stylesheet = main_window.styleSheet()
+        assert "QDockWidget" in stylesheet
+
+    def test_window_is_animated(self, main_window: InkMainWindow) -> None:
+        """Test window has dock animations enabled."""
+        assert main_window.isAnimated()
+
+
 class TestPerformanceBasic:
     """Basic performance tests that don't require benchmark plugin."""
 

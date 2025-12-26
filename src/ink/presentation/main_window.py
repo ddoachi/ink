@@ -219,6 +219,80 @@ class InkMainWindow(QMainWindow):
         # a single dock area, enabling more flexible panel arrangements
         self.setDockNestingEnabled(True)
 
+        # Enable animated dock transitions for smooth user experience
+        self.setAnimated(True)
+
+        # Apply visual polish styling
+        self._apply_styling()
+
+    def _apply_styling(self) -> None:
+        """Apply visual polish styling to the main window.
+
+        Enhances the visual appearance for a professional look:
+        - Visible splitter handles for intuitive panel resizing
+        - Hover effects on splitters for better discoverability
+        - Styled dock widget title bars
+        - Consistent background colors
+
+        Design Decisions:
+            - Neutral gray color palette for professional appearance
+            - Subtle borders to differentiate panel boundaries
+            - Hover effects to indicate interactivity
+            - Minimal styling to avoid distracting from content
+
+        The stylesheet is kept minimal for MVP - a full theming system
+        is planned for P1. This provides functional polish without
+        over-engineering.
+
+        See Also:
+            - E06-F01-T05 spec for UI polish requirements
+            - Future: Theme system in E06 (P1)
+        """
+        self.setStyleSheet("""
+            /* Main Window Background
+               Light gray provides neutral backdrop for content panels */
+            QMainWindow {
+                background-color: #f5f5f5;
+            }
+
+            /* Dock Widget Title Bar Styling
+               Slightly darker background makes titles distinguishable
+               from content while maintaining visual harmony */
+            QDockWidget::title {
+                background-color: #e8e8e8;
+                padding: 6px;
+                border-bottom: 1px solid #d0d0d0;
+            }
+
+            /* Splitter Handle Styling
+               Default Qt splitters are subtle (1px). These styles make
+               them more visible and provide feedback on interaction */
+            QSplitter::handle {
+                background-color: #d0d0d0;
+            }
+
+            QSplitter::handle:hover {
+                background-color: #b0b0b0;
+            }
+
+            /* Horizontal splitters (between left/right areas) */
+            QSplitter::handle:horizontal {
+                width: 2px;
+            }
+
+            /* Vertical splitters (between top/bottom areas) */
+            QSplitter::handle:vertical {
+                height: 2px;
+            }
+
+            /* Dock Widget Content Background
+               White background for panel content provides clear
+               visual separation from the main window background */
+            QDockWidget QWidget {
+                background-color: #ffffff;
+            }
+        """)
+
     def _setup_menus(self) -> None:
         """Set up application menu bar with File and Help menus.
 
