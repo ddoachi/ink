@@ -11,12 +11,13 @@ Design Decisions:
     - When using geometry persistence (E06-F06-T02), defaults to 1280x800
     - Minimum 1024x768 prevents unusable cramped layouts
     - SchematicCanvas as central widget provides primary workspace area
-    - Optional AppSettings injection for geometry persistence
+    - Optional AppSettings injection for geometry persistence and settings management
 
 See Also:
     - Spec E06-F01-T01 for window shell requirements
     - Spec E06-F01-T02 for central widget requirements
     - Spec E06-F06-T02 for window geometry persistence
+    - Spec E06-F06-T04 for settings migration and reset
     - Qt documentation on QMainWindow for extension points
 """
 
@@ -26,7 +27,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QCloseEvent, QGuiApplication
-from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow, QMenu, QMessageBox
 
 from ink.presentation.canvas import SchematicCanvas
 
@@ -43,6 +44,7 @@ class InkMainWindow(QMainWindow):
     - Default and minimum window sizing
     - Standard window decorations (minimize, maximize, close)
     - Window geometry persistence across sessions (when app_settings provided)
+    - Menu bar with Help > Settings for settings management
 
     When constructed with an AppSettings instance, the window automatically:
     - Restores saved geometry (size, position) on startup
@@ -54,7 +56,7 @@ class InkMainWindow(QMainWindow):
 
     Attributes:
         schematic_canvas: The central canvas widget for schematic visualization.
-        app_settings: Optional settings manager for geometry persistence.
+        app_settings: Optional settings manager for geometry persistence and management.
         _WINDOW_TITLE: Application title shown in title bar.
         _DEFAULT_WIDTH: Default window width in pixels (optimized for 1080p).
         _DEFAULT_HEIGHT: Default window height in pixels.
@@ -78,6 +80,7 @@ class InkMainWindow(QMainWindow):
         - E06-F01-T03: Adds dock widgets (hierarchy, properties)
         - E06-F01-T04: Integrates window into main.py entry point
         - E06-F06-T02: Window geometry persistence
+        - E06-F06-T04: Settings migration and reset functionality
     """
 
     # Instance attribute type hints for IDE/type checker support
@@ -101,14 +104,15 @@ class InkMainWindow(QMainWindow):
     def __init__(self, app_settings: AppSettings | None = None) -> None:
         """Initialize the main window with configured properties.
 
-        Sets up window title, size constraints, decorations, and central widget.
-        If app_settings is provided, restores saved geometry and state.
-        Does not show the window - caller must call show() explicitly.
+        Sets up window title, size constraints, decorations, central widget,
+        and menu bar. If app_settings is provided, restores saved geometry
+        and state. Does not show the window - caller must call show() explicitly.
 
         Args:
-            app_settings: Optional settings manager for geometry persistence.
-                          If provided, geometry will be saved on close and
-                          restored on startup.
+            app_settings: Optional settings manager for geometry persistence
+                          and settings management. If provided, geometry will
+                          be saved on close and restored on startup, and
+                          settings menu items will be enabled.
         """
         super().__init__()
         self.app_settings = app_settings
@@ -117,6 +121,7 @@ class InkMainWindow(QMainWindow):
         # restoreState() requires dock widgets to exist first
         self._setup_window()
         self._setup_central_widget()
+        self._setup_menus()
 
         # Restore geometry AFTER all widgets are created
         if self.app_settings is not None:
@@ -192,6 +197,54 @@ class InkMainWindow(QMainWindow):
         # Central widget automatically fills available space between
         # toolbars, dock widgets, and status bar
         self.setCentralWidget(self.schematic_canvas)
+
+    def _setup_menus(self) -> None:
+        """Set up the application menu bar.
+
+        Creates the menu structure:
+        - Help menu with Settings submenu for managing application settings
+
+        The Settings menu provides:
+        - Reset Window Layout: Clears saved window geometry
+        - Clear Recent Files: Clears the recent files list
+        - Reset All Settings: Resets everything to defaults (with confirmation)
+        - Show Settings File Location: Shows where settings are stored
+        """
+        menubar = self.menuBar()
+
+        # Help menu (rightmost, as per convention)
+        help_menu = menubar.addMenu("&Help")
+
+        # Add separator before settings submenu
+        help_menu.addSeparator()
+
+        # Settings submenu for settings management
+        settings_menu = QMenu("&Settings", self)
+        help_menu.addMenu(settings_menu)
+
+        # Reset Window Layout action
+        reset_geometry_action = settings_menu.addAction("Reset Window Layout")
+        reset_geometry_action.triggered.connect(self._on_reset_geometry)
+        reset_geometry_action.setEnabled(self.app_settings is not None)
+
+        # Clear Recent Files action
+        reset_recent_action = settings_menu.addAction("Clear Recent Files")
+        reset_recent_action.triggered.connect(self._on_clear_recent_files)
+        reset_recent_action.setEnabled(self.app_settings is not None)
+
+        settings_menu.addSeparator()
+
+        # Reset All Settings action (destructive, at bottom with separator)
+        reset_all_action = settings_menu.addAction("Reset All Settings...")
+        reset_all_action.triggered.connect(self._on_reset_all_settings)
+        reset_all_action.setEnabled(self.app_settings is not None)
+
+        settings_menu.addSeparator()
+
+        # Show Settings File Location action (diagnostic)
+        show_settings_action = settings_menu.addAction("Show Settings File Location")
+        show_settings_action.triggered.connect(self._on_show_settings_location)
+        show_settings_action.setEnabled(self.app_settings is not None)
 
     # =========================================================================
     # Window Geometry Persistence (E06-F06-T02)
@@ -302,3 +355,104 @@ class InkMainWindow(QMainWindow):
 
         # Accept the close event - window will close
         event.accept()
+
+    # =========================================================================
+    # Settings Menu Action Handlers (E06-F06-T04)
+    # =========================================================================
+
+    def _on_reset_geometry(self) -> None:
+        """Handle Reset Window Layout action.
+
+        Clears the saved window geometry and state, then informs the user
+        that a restart is required for changes to take effect.
+        """
+        if self.app_settings is None:
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Reset Window Layout",
+            "Reset window size and position to defaults?\n\n"
+            "The application will use default layout on next restart.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self.app_settings.reset_window_geometry()
+            QMessageBox.information(
+                self,
+                "Window Layout Reset",
+                "Window layout has been reset.\n\n"
+                "Restart the application to apply the new layout.",
+            )
+
+    def _on_clear_recent_files(self) -> None:
+        """Handle Clear Recent Files action.
+
+        Clears the recent files list immediately without requiring restart.
+        """
+        if self.app_settings is None:
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Clear Recent Files",
+            "Clear the list of recently opened files?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self.app_settings.reset_recent_files()
+            QMessageBox.information(
+                self,
+                "Recent Files Cleared",
+                "The recent files list has been cleared.",
+            )
+
+    def _on_reset_all_settings(self) -> None:
+        """Handle Reset All Settings action.
+
+        Shows a confirmation dialog with details about what will be reset,
+        then resets all settings if confirmed. Informs user about restart.
+        """
+        if self.app_settings is None:
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Reset All Settings",
+            "Reset all settings to defaults?\n\n"
+            "This will:\n"
+            "• Clear window layout\n"
+            "• Clear recent files\n"
+            "• Reset all preferences\n\n"
+            "The application will use default settings on next restart.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,  # Default to No for safety
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self.app_settings.reset_all_settings()
+            QMessageBox.information(
+                self,
+                "Settings Reset",
+                "All settings have been reset to defaults.\n\n"
+                "Restart the application to apply the changes.",
+            )
+
+    def _on_show_settings_location(self) -> None:
+        """Handle Show Settings File Location action.
+
+        Displays an information dialog showing where settings are stored.
+        Useful for debugging and support purposes.
+        """
+        if self.app_settings is None:
+            return
+
+        settings_path = self.app_settings.get_settings_file_path()
+
+        QMessageBox.information(
+            self,
+            "Settings File Location",
+            f"Settings are stored at:\n\n{settings_path}",
+        )
