@@ -26,6 +26,7 @@ See Also:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QSettings
@@ -315,3 +316,196 @@ class AppSettings:
             >>> settings.sync()  # Ensure it's written immediately
         """
         self.settings.sync()
+
+    # =========================================================================
+    # Recent Files Management Methods
+    # =========================================================================
+    # These methods manage the list of recently opened files, providing:
+    # - Adding files to the list (with move-to-front for duplicates)
+    # - Retrieving the list (with automatic filtering of non-existent files)
+    # - Clearing the list
+    # - Configuring maximum list size
+
+    def add_recent_file(self, file_path: str) -> None:
+        """Add a file to the recent files list.
+
+        The file is added to the front of the list (most recent first).
+        If the file already exists in the list, it is moved to the front
+        instead of creating a duplicate. The list is automatically trimmed
+        to respect the maximum recent files limit.
+
+        This method normalizes the path to an absolute path before storing
+        to ensure consistent matching across sessions.
+
+        Args:
+            file_path: Path to the file (relative or absolute). Will be
+                       converted to an absolute path.
+
+        Example:
+            >>> settings = AppSettings()
+            >>> settings.add_recent_file("/path/to/design.ckt")
+            >>> recent = settings.get_recent_files()
+            >>> "/path/to/design.ckt" in recent
+            True
+
+        See Also:
+            - get_recent_files: Retrieve the current list
+            - clear_recent_files: Clear all entries
+            - get_max_recent_files: Get the maximum list size
+        """
+        # Normalize to absolute path for consistent storage
+        # This resolves relative paths and symlinks
+        normalized_path = str(Path(file_path).resolve())
+
+        # Get current list of recent files
+        recent = self._get_raw_recent_files()
+
+        # Remove if already exists (will re-add at front to update position)
+        if normalized_path in recent:
+            recent.remove(normalized_path)
+
+        # Insert at front (newest first)
+        recent.insert(0, normalized_path)
+
+        # Trim to maximum allowed size
+        max_recent = self.get_max_recent_files()
+        recent = recent[:max_recent]
+
+        # Persist the updated list
+        self.set_value(self.KEY_RECENT_FILES, recent)
+
+    def get_recent_files(self) -> list[str]:
+        """Get the list of recently opened files.
+
+        Returns a list of file paths ordered by most recently opened first.
+        Non-existent files are automatically filtered out and the stored
+        list is updated if any files were removed.
+
+        This lazy cleanup approach means:
+        - No background tasks are needed to maintain the list
+        - Files deleted outside the app are cleaned up on next access
+        - The UI always shows only files that can be opened
+
+        Returns:
+            List of absolute file paths as strings, newest first.
+            Empty list if no recent files exist.
+
+        Example:
+            >>> settings = AppSettings()
+            >>> recent = settings.get_recent_files()
+            >>> for path in recent:
+            ...     print(path)
+            /home/user/projects/latest.ckt
+            /home/user/projects/previous.ckt
+
+        See Also:
+            - add_recent_file: Add a file to the list
+            - clear_recent_files: Clear all entries
+        """
+        # Get raw list from storage
+        files = self._get_raw_recent_files()
+
+        # Filter out non-existent files
+        # This handles files that were deleted outside the application
+        existing_files = [f for f in files if Path(f).exists()]
+
+        # If any files were removed, update the stored list to keep it clean
+        # This prevents the list from accumulating dead entries over time
+        if len(existing_files) < len(files):
+            self.set_value(self.KEY_RECENT_FILES, existing_files)
+
+        return existing_files
+
+    def _get_raw_recent_files(self) -> list[str]:
+        """Get the raw recent files list without existence filtering.
+
+        This internal method retrieves the stored list and ensures all
+        entries are valid strings, but does not check file existence.
+        Used by add_recent_file to avoid unnecessary file system checks.
+
+        Returns:
+            List of stored file paths as strings.
+        """
+        files = self.get_value(self.KEY_RECENT_FILES, [], value_type=list)
+
+        # Ensure all entries are non-empty strings
+        # This handles potential corruption or type coercion issues
+        return [str(f) for f in files if f]
+
+    def clear_recent_files(self) -> None:
+        """Clear the recent files list.
+
+        Removes all entries from the recent files list. This operation
+        is immediate and persists on next sync.
+
+        Example:
+            >>> settings = AppSettings()
+            >>> settings.add_recent_file("design.ckt")
+            >>> settings.clear_recent_files()
+            >>> len(settings.get_recent_files())
+            0
+
+        See Also:
+            - get_recent_files: Retrieve the current list
+            - add_recent_file: Add files back to the list
+        """
+        self.set_value(self.KEY_RECENT_FILES, [])
+
+    def get_max_recent_files(self) -> int:
+        """Get the maximum number of recent files to remember.
+
+        This limit determines how many files are kept in the recent files
+        list. When the limit is exceeded, the oldest files are removed.
+
+        Returns:
+            Maximum number of recent files (default: 10).
+
+        Example:
+            >>> settings = AppSettings()
+            >>> max_files = settings.get_max_recent_files()
+            >>> print(max_files)
+            10
+
+        See Also:
+            - set_max_recent_files: Change the maximum
+            - DEFAULT_MAX_RECENT: The default value constant
+        """
+        result = self.get_value(
+            self.KEY_MAX_RECENT,
+            self.DEFAULT_MAX_RECENT,
+            value_type=int,
+        )
+        return int(result) if result is not None else self.DEFAULT_MAX_RECENT
+
+    def set_max_recent_files(self, max_count: int) -> None:
+        """Set the maximum number of recent files to remember.
+
+        Changes the limit for the recent files list. If the current list
+        exceeds the new limit, it is immediately trimmed to fit.
+
+        Args:
+            max_count: New maximum count. Must be >= 1.
+
+        Raises:
+            ValueError: If max_count is less than 1.
+
+        Example:
+            >>> settings = AppSettings()
+            >>> settings.set_max_recent_files(5)
+            >>> settings.get_max_recent_files()
+            5
+
+        See Also:
+            - get_max_recent_files: Get the current maximum
+        """
+        if max_count < 1:
+            msg = "max_count must be >= 1"
+            raise ValueError(msg)
+
+        self.set_value(self.KEY_MAX_RECENT, max_count)
+
+        # Trim existing list if it now exceeds the new maximum
+        # This ensures immediate consistency with the new setting
+        recent = self._get_raw_recent_files()
+        if len(recent) > max_count:
+            self.set_value(self.KEY_RECENT_FILES, recent[:max_count])
