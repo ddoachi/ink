@@ -137,11 +137,17 @@ def metadata_to_yaml(metadata: dict) -> str:
     return '\n'.join(lines)
 
 
+def is_task_or_subtask(spec_id: str) -> bool:
+    """Check if spec ID is task level (E01-F01-T01) or subtask level (E01-F01-T01-S01)."""
+    # Task: E##-F##-T## or deeper
+    return bool(re.match(r'^E\d+-F\d+-T\d+', spec_id))
+
+
 def convert_spec_file(file_path: Path) -> bool:
     """Convert a single spec file. Returns True if converted."""
     content = file_path.read_text()
 
-    # If already has YAML frontmatter, check if title needs to be added
+    # If already has YAML frontmatter, check if updates are needed
     if content.startswith('---'):
         # Parse existing frontmatter
         end_marker = content.find('---', 3)
@@ -152,33 +158,59 @@ def convert_spec_file(file_path: Path) -> bool:
         frontmatter_text = content[4:end_marker].strip()
         remaining_content = content[end_marker + 3:].lstrip()
 
-        # Check if title already exists
-        if 'title:' in frontmatter_text:
-            print(f'  ⏭️  Already has title: {file_path.name}')
-            return False
+        # Extract spec ID from frontmatter
+        id_match = re.search(r'^id:\s*(.+)$', frontmatter_text, re.MULTILINE)
+        spec_id = id_match.group(1).strip() if id_match else ''
 
-        # Extract title from remaining content
-        title_match = re.match(r'^# Spec:\s*[\w-]+\s*-\s*(.+)$', remaining_content, re.MULTILINE)
-        if not title_match:
-            print(f'  ⚠️  No title found in header: {file_path.name}')
-            return False
-
-        title = title_match.group(1).strip()
-
-        # Add title after id line
+        needs_update = False
         lines = frontmatter_text.split('\n')
         new_lines = []
-        title_added = False
+
+        # Check what needs to be added
+        has_title = 'title:' in frontmatter_text
+        has_clickup_id = 'clickup_task_id:' in frontmatter_text
+        needs_clickup_id = is_task_or_subtask(spec_id) and not has_clickup_id
+
+        if has_title and not needs_clickup_id:
+            print(f'  ⏭️  Already complete: {file_path.name}')
+            return False
+
+        # Extract title if needed
+        title = None
+        if not has_title:
+            title_match = re.match(r'^# Spec:\s*[\w-]+\s*-\s*(.+)$', remaining_content, re.MULTILINE)
+            if title_match:
+                title = title_match.group(1).strip()
+                needs_update = True
+
+        if needs_clickup_id:
+            needs_update = True
+
+        if not needs_update:
+            print(f'  ⏭️  No updates needed: {file_path.name}')
+            return False
+
+        # Rebuild frontmatter with additions
         for line in lines:
             new_lines.append(line)
-            if line.startswith('id:') and not title_added:
+            # Add title after id line
+            if line.startswith('id:') and title and not has_title:
                 new_lines.append(f'title: {title}')
-                title_added = True
+
+        # Add clickup_task_id at the end for tasks/subtasks
+        if needs_clickup_id:
+            new_lines.append("clickup_task_id: ''")
 
         new_frontmatter = '---\n' + '\n'.join(new_lines) + '\n---'
         new_content = new_frontmatter + '\n\n' + remaining_content
         file_path.write_text(new_content)
-        print(f'  ✅ Added title: {file_path.name}')
+
+        updates = []
+        if title and not has_title:
+            updates.append('title')
+        if needs_clickup_id:
+            updates.append('clickup_task_id')
+        print(f'  ✅ Added {", ".join(updates)}: {file_path.name}')
         return True
 
     # Parse and convert from markdown format
