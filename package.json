@@ -1,0 +1,27 @@
+{
+  "name": "ink",
+  "version": "0.1.0",
+  "description": "Ink - Incremental Schematic Viewer for gate-level netlists",
+  "private": true,
+  "scripts": {
+    "clickup:sync": "yarn exec ts-node scripts/clickup/sync-specs-to-clickup.ts",
+    "spec:start": "yarn exec ts-node scripts/workflow/start-spec.ts",
+    "spec:next": "yarn exec ts-node scripts/workflow/next-spec.ts"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^25.0.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ddoachi/ink.git"
+  },
+  "author": "Ink Team",
+  "license": "PRIVATE",
+  "dependencies": {
+    "axios": "^1.13.2",
+    "js-yaml": "^4.1.1"
+  }
+}
