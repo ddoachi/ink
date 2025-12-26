@@ -61,5 +61,13 @@ htmlcov/
 .tox/
 .nox/
 
+# Type checking
+.mypy_cache/
+.pyright/
+pyrightconfig.json
+
+# Ruff
+.ruff_cache/
+
 # Misc
 *.log
