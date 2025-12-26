@@ -9,9 +9,11 @@ Design Decisions:
     - Explicit window flags ensure consistent decorations across Linux WMs
     - Default 1600x900 size optimized for 1080p displays with taskbar visible
     - Minimum 1024x768 prevents unusable cramped layouts
+    - SchematicCanvas as central widget provides primary workspace area
 
 See Also:
-    - Spec E06-F01-T01 for detailed requirements
+    - Spec E06-F01-T01 for window shell requirements
+    - Spec E06-F01-T02 for central widget requirements
     - Qt documentation on QMainWindow for extension points
 """
 
@@ -19,6 +21,8 @@ from __future__ import annotations
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import QMainWindow
+
+from ink.presentation.canvas import SchematicCanvas
 
 
 class InkMainWindow(QMainWindow):
@@ -31,10 +35,11 @@ class InkMainWindow(QMainWindow):
     - Standard window decorations (minimize, maximize, close)
 
     The window is designed to work well on 1080p displays while remaining
-    usable on smaller 768p screens. Future tasks will add central widget
-    (SchematicCanvas), dock widgets, and menu/toolbars.
+    usable on smaller 768p screens. Future tasks will add dock widgets
+    and menu/toolbars.
 
     Attributes:
+        schematic_canvas: The central canvas widget for schematic visualization.
         _WINDOW_TITLE: Application title shown in title bar.
         _DEFAULT_WIDTH: Default window width in pixels (optimized for 1080p).
         _DEFAULT_HEIGHT: Default window height in pixels.
@@ -47,10 +52,12 @@ class InkMainWindow(QMainWindow):
         >>> window.show()
 
     See Also:
-        - E06-F01-T02: Adds SchematicCanvas as central widget
         - E06-F01-T03: Adds dock widgets (hierarchy, properties)
         - E06-F01-T04: Integrates window into main.py entry point
     """
+
+    # Instance attribute type hints for IDE/type checker support
+    schematic_canvas: SchematicCanvas
 
     # Window configuration constants
     # These are class-level to make requirements explicit and testable
@@ -63,11 +70,12 @@ class InkMainWindow(QMainWindow):
     def __init__(self) -> None:
         """Initialize the main window with configured properties.
 
-        Sets up window title, size constraints, and decorations.
+        Sets up window title, size constraints, decorations, and central widget.
         Does not show the window - caller must call show() explicitly.
         """
         super().__init__()
         self._setup_window()
+        self._setup_central_widget()
 
     def _setup_window(self) -> None:
         """Configure main window properties.
@@ -114,3 +122,28 @@ class InkMainWindow(QMainWindow):
             | Qt.WindowType.WindowMaximizeButtonHint
             | Qt.WindowType.WindowCloseButtonHint
         )
+
+    def _setup_central_widget(self) -> None:
+        """Create and configure the central schematic canvas.
+
+        The central widget is the primary workspace area in QMainWindow.
+        It occupies the largest portion of the window and cannot be
+        closed or moved (unlike dock widgets).
+
+        Design decisions:
+            - SchematicCanvas is stored as instance attribute for future access
+            - Parent set to self for Qt memory management (auto-deletion)
+            - setCentralWidget() makes Qt manage layout automatically
+
+        The canvas will be accessible via:
+            - window.schematic_canvas (direct attribute access)
+            - window.centralWidget() (Qt standard method)
+        """
+        # Create canvas with self as parent for proper Qt ownership
+        # When InkMainWindow is destroyed, schematic_canvas is auto-deleted
+        self.schematic_canvas = SchematicCanvas(parent=self)
+
+        # Set as central widget - Qt handles layout and sizing
+        # Central widget automatically fills available space between
+        # toolbars, dock widgets, and status bar
+        self.setCentralWidget(self.schematic_canvas)
