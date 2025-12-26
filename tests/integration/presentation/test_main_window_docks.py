@@ -15,7 +15,6 @@ See Also:
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -28,6 +27,7 @@ from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from pathlib import Path
 
 
 @pytest.fixture(scope="module")
@@ -69,7 +69,7 @@ def isolated_settings(tmp_path: Path) -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def app_settings(isolated_settings: Path) -> AppSettings:  # noqa: ARG001
+def app_settings(isolated_settings: Path) -> AppSettings:
     """Create AppSettings instance for testing.
 
     Args:
@@ -83,7 +83,7 @@ def app_settings(isolated_settings: Path) -> AppSettings:  # noqa: ARG001
 
 @pytest.fixture
 def window(
-    qapp: QApplication, app_settings: AppSettings  # noqa: ARG001
+    qapp: QApplication, app_settings: AppSettings
 ) -> Generator[InkMainWindow, None, None]:
     """Create main window for each test and cleanup after.
 

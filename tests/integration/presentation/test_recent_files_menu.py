@@ -68,7 +68,7 @@ def isolated_settings(tmp_path: Path) -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def app_settings(isolated_settings: Path) -> AppSettings:  # noqa: ARG001
+def app_settings(isolated_settings: Path) -> AppSettings:
     """Create AppSettings instance with isolated storage.
 
     Args:
