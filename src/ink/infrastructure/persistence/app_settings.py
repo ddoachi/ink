@@ -149,9 +149,7 @@ class AppSettings:
             # application crashes before normal shutdown
             self.sync()
 
-    def get_value(
-        self, key: str, default: Any = None, value_type: type | None = None
-    ) -> Any:
+    def get_value(self, key: str, default: Any = None, value_type: type | None = None) -> Any:
         """Get a setting value with optional type conversion.
 
         Retrieves the value associated with the given key. If the key

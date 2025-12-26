@@ -71,7 +71,7 @@ def isolated_settings(tmp_path: Path) -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def app_settings(isolated_settings: Path) -> AppSettings:  # noqa: ARG001
+def app_settings(isolated_settings: Path) -> AppSettings:
     """Create AppSettings instance with isolated storage.
 
     Args:
@@ -144,25 +144,23 @@ class TestAppSettingsInitialization:
         """Verify QSettings uses correct application name."""
         assert app_settings.settings.applicationName() == "Ink"
 
-    def test_initializes_defaults_on_first_run(
-        self, isolated_settings: Path
-    ) -> None:
+    def test_initializes_defaults_on_first_run(self, isolated_settings: Path) -> None:
         """Verify default values are set on first run."""
         # Create fresh instance (simulates first run)
         settings = AppSettings()
 
         # Check defaults were initialized
         assert settings.has_key(AppSettings.KEY_SETTINGS_VERSION)
-        assert settings.get_value(
-            AppSettings.KEY_SETTINGS_VERSION, value_type=int
-        ) == AppSettings.CURRENT_VERSION
-        assert settings.get_value(
-            AppSettings.KEY_MAX_RECENT, value_type=int
-        ) == AppSettings.DEFAULT_MAX_RECENT
+        assert (
+            settings.get_value(AppSettings.KEY_SETTINGS_VERSION, value_type=int)
+            == AppSettings.CURRENT_VERSION
+        )
+        assert (
+            settings.get_value(AppSettings.KEY_MAX_RECENT, value_type=int)
+            == AppSettings.DEFAULT_MAX_RECENT
+        )
 
-    def test_does_not_reinitialize_existing_settings(
-        self, isolated_settings: Path
-    ) -> None:
+    def test_does_not_reinitialize_existing_settings(self, isolated_settings: Path) -> None:
         """Verify defaults are not overwritten on subsequent runs."""
         # First run - creates defaults
         settings1 = AppSettings()
@@ -171,9 +169,7 @@ class TestAppSettingsInitialization:
 
         # Second run - should not overwrite
         settings2 = AppSettings()
-        assert settings2.get_value(
-            AppSettings.KEY_MAX_RECENT, value_type=int
-        ) == 5
+        assert settings2.get_value(AppSettings.KEY_MAX_RECENT, value_type=int) == 5
 
 
 class TestAppSettingsGetValue:
@@ -184,16 +180,12 @@ class TestAppSettingsGetValue:
         app_settings.set_value("test/key", "test_value")
         assert app_settings.get_value("test/key") == "test_value"
 
-    def test_returns_default_for_nonexistent_key(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_returns_default_for_nonexistent_key(self, app_settings: AppSettings) -> None:
         """Verify get_value returns default for missing key."""
         result = app_settings.get_value("nonexistent/key", "default")
         assert result == "default"
 
-    def test_returns_none_for_nonexistent_without_default(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_returns_none_for_nonexistent_without_default(self, app_settings: AppSettings) -> None:
         """Verify get_value returns None when no default provided."""
         result = app_settings.get_value("nonexistent/key")
         assert result is None
@@ -263,15 +255,11 @@ class TestAppSettingsSetValue:
 class TestAppSettingsHasKey:
     """Test AppSettings.has_key() method."""
 
-    def test_returns_false_for_nonexistent_key(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_returns_false_for_nonexistent_key(self, app_settings: AppSettings) -> None:
         """Verify has_key returns False for missing keys."""
         assert app_settings.has_key("nonexistent/key") is False
 
-    def test_returns_true_for_existing_key(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_returns_true_for_existing_key(self, app_settings: AppSettings) -> None:
         """Verify has_key returns True for existing keys."""
         app_settings.set_value("test/key", "value")
         assert app_settings.has_key("test/key") is True
@@ -332,9 +320,7 @@ class TestAppSettingsSync:
         # Should not raise an exception
         app_settings.sync()
 
-    def test_sync_persists_values(
-        self, isolated_settings: Path
-    ) -> None:
+    def test_sync_persists_values(self, isolated_settings: Path) -> None:
         """Verify sync() writes values to disk."""
         # Create instance, set value, and sync
         settings1 = AppSettings()
@@ -349,9 +335,7 @@ class TestAppSettingsSync:
 class TestAppSettingsPersistence:
     """Test that settings persist across instance recreation."""
 
-    def test_values_persist_across_instances(
-        self, isolated_settings: Path
-    ) -> None:
+    def test_values_persist_across_instances(self, isolated_settings: Path) -> None:
         """Verify settings survive instance recreation."""
         # Create first instance and set values
         settings1 = AppSettings()
@@ -364,9 +348,7 @@ class TestAppSettingsPersistence:
         assert settings2.get_value("persist/string") == "hello"
         assert settings2.get_value("persist/int", value_type=int) == 42
 
-    def test_qbytearray_persists_across_instances(
-        self, isolated_settings: Path
-    ) -> None:
+    def test_qbytearray_persists_across_instances(self, isolated_settings: Path) -> None:
         """Verify QByteArray values persist (important for geometry)."""
         byte_data = QByteArray(b"\x00\x01\x02\x03\x04\x05")
 
@@ -375,7 +357,5 @@ class TestAppSettingsPersistence:
         settings1.sync()
 
         settings2 = AppSettings()
-        result = settings2.get_value(
-            AppSettings.KEY_WINDOW_GEOMETRY, value_type=QByteArray
-        )
+        result = settings2.get_value(AppSettings.KEY_WINDOW_GEOMETRY, value_type=QByteArray)
         assert result == byte_data
