@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QByteArray, QSettings
 
 
 class AppSettings:
@@ -315,3 +315,165 @@ class AppSettings:
             >>> settings.sync()  # Ensure it's written immediately
         """
         self.settings.sync()
+
+    # =========================================================================
+    # Window Geometry Persistence Methods (E06-F06-T02)
+    # =========================================================================
+    # These methods provide type-safe save/load operations for window geometry
+    # and state, wrapping QByteArray data from QMainWindow.saveGeometry() and
+    # saveState().
+
+    def save_window_geometry(self, geometry: QByteArray) -> None:
+        """Save window geometry (size, position, screen info).
+
+        Stores the geometry data returned by QMainWindow.saveGeometry().
+        This includes:
+        - Window size (width, height)
+        - Window position on screen (x, y)
+        - Screen number (for multi-monitor setups)
+        - Window flags and state (maximized, minimized, etc.)
+
+        Args:
+            geometry: Window geometry from QMainWindow.saveGeometry().
+                      Must be a QByteArray containing the serialized geometry.
+
+        Example:
+            >>> from PySide6.QtCore import QByteArray
+            >>> settings = AppSettings()
+            >>> # In your MainWindow:
+            >>> settings.save_window_geometry(self.saveGeometry())
+
+        See Also:
+            - load_window_geometry() for retrieving saved geometry
+            - save_window_state() for dock widget layout
+            - Qt documentation on QMainWindow.saveGeometry()
+        """
+        self.set_value(self.KEY_WINDOW_GEOMETRY, geometry)
+
+    def load_window_geometry(self) -> QByteArray | None:
+        """Load window geometry (size, position, screen info).
+
+        Retrieves the geometry data previously saved with save_window_geometry().
+        Returns None if no geometry is saved or if the stored data is invalid
+        (not a QByteArray).
+
+        Returns:
+            QByteArray containing window geometry data, or None if:
+            - No geometry has been saved yet (first run)
+            - Stored data is corrupted or not a QByteArray
+
+        Example:
+            >>> settings = AppSettings()
+            >>> geometry = settings.load_window_geometry()
+            >>> if geometry:
+            ...     self.restoreGeometry(geometry)
+            ... else:
+            ...     # Use defaults
+            ...     self.resize(1280, 800)
+
+        See Also:
+            - save_window_geometry() for storing geometry
+            - has_window_geometry() to check if geometry exists
+        """
+        geometry = self.get_value(self.KEY_WINDOW_GEOMETRY)
+        # Validate type - QSettings may return other types if data is corrupted
+        return geometry if isinstance(geometry, QByteArray) else None
+
+    def save_window_state(self, state: QByteArray) -> None:
+        """Save window state (dock widget layout, toolbars).
+
+        Stores the state data returned by QMainWindow.saveState().
+        This includes:
+        - Dock widget positions (left, right, bottom, top areas)
+        - Dock widget sizes
+        - Dock widget visibility
+        - Dock widget floating state
+        - Toolbar positions
+        - Main window state version (for compatibility)
+
+        Args:
+            state: Window state from QMainWindow.saveState().
+                   Must be a QByteArray containing the serialized state.
+
+        Example:
+            >>> from PySide6.QtCore import QByteArray
+            >>> settings = AppSettings()
+            >>> # In your MainWindow:
+            >>> settings.save_window_state(self.saveState())
+
+        See Also:
+            - load_window_state() for retrieving saved state
+            - save_window_geometry() for window size/position
+            - Qt documentation on QMainWindow.saveState()
+        """
+        self.set_value(self.KEY_WINDOW_STATE, state)
+
+    def load_window_state(self) -> QByteArray | None:
+        """Load window state (dock widget layout, toolbars).
+
+        Retrieves the state data previously saved with save_window_state().
+        Returns None if no state is saved or if the stored data is invalid
+        (not a QByteArray).
+
+        Returns:
+            QByteArray containing window state data, or None if:
+            - No state has been saved yet (first run)
+            - Stored data is corrupted or not a QByteArray
+
+        Example:
+            >>> settings = AppSettings()
+            >>> state = settings.load_window_state()
+            >>> if state:
+            ...     self.restoreState(state)
+
+        See Also:
+            - save_window_state() for storing state
+            - has_window_state() to check if state exists
+        """
+        state = self.get_value(self.KEY_WINDOW_STATE)
+        # Validate type - QSettings may return other types if data is corrupted
+        return state if isinstance(state, QByteArray) else None
+
+    def has_window_geometry(self) -> bool:
+        """Check if window geometry has been saved.
+
+        Useful for determining if this is the first run (no saved geometry)
+        and deciding whether to use default geometry or restore saved geometry.
+
+        Returns:
+            True if window geometry exists in settings, False otherwise.
+
+        Example:
+            >>> settings = AppSettings()
+            >>> if settings.has_window_geometry():
+            ...     self.restoreGeometry(settings.load_window_geometry())
+            ... else:
+            ...     # First run - use defaults
+            ...     self.resize(1280, 800)
+            ...     self._center_on_screen()
+
+        See Also:
+            - load_window_geometry() to retrieve the geometry
+            - has_window_state() to check for dock widget state
+        """
+        return self.has_key(self.KEY_WINDOW_GEOMETRY)
+
+    def has_window_state(self) -> bool:
+        """Check if window state has been saved.
+
+        Useful for determining if dock widget layout state exists
+        before attempting to restore it.
+
+        Returns:
+            True if window state exists in settings, False otherwise.
+
+        Example:
+            >>> settings = AppSettings()
+            >>> if settings.has_window_state():
+            ...     self.restoreState(settings.load_window_state())
+
+        See Also:
+            - load_window_state() to retrieve the state
+            - has_window_geometry() to check for window geometry
+        """
+        return self.has_key(self.KEY_WINDOW_STATE)
