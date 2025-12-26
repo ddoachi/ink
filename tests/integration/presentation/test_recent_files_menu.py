@@ -277,8 +277,8 @@ class TestRecentFilesMenuUpdates:
         main_window.app_settings.add_recent_file(temp_files[0])
         main_window._update_recent_files_menu()
 
-        # Clear
-        main_window._on_clear_recent_files()
+        # Clear using the no-dialog method (from File > Open Recent submenu)
+        main_window._on_clear_recent_files_from_menu()
 
         # Should show empty state
         actions = main_window.recent_files_menu.actions()
