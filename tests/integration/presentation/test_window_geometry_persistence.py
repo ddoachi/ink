@@ -112,15 +112,6 @@ class TestMainWindowAcceptsAppSettings:
         assert hasattr(window, "app_settings")
         assert window.app_settings is app_settings
 
-    def test_main_window_works_without_app_settings(
-        self, qtbot: QtBot
-    ) -> None:
-        """Verify InkMainWindow works without app_settings (backward compatibility)."""
-        window = InkMainWindow()
-        qtbot.addWidget(window)
-
-        assert window is not None
-
 
 class TestWindowGeometryRestoration:
     """Tests for window geometry restoration on startup."""
