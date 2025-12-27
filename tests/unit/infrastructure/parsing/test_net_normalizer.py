@@ -6,6 +6,8 @@ used to process CDL netlist net names into a consistent format.
 TDD Phase: RED - Tests written before implementation.
 """
 
+from collections.abc import Iterable
+
 import pytest
 
 from ink.domain.value_objects.net import NetInfo, NetType
@@ -340,3 +342,139 @@ class TestNetNormalizerEdgeCases:
         # Nested brackets should not match the bus pattern
         assert info.is_bus is False
         assert info.normalized_name == "a<<7>>"
+
+
+class TestNetNormalizerCustomNets:
+    """Tests for custom power/ground net name configuration."""
+
+    def test_custom_power_net_single(self) -> None:
+        """Test single custom power net name."""
+        normalizer = NetNormalizer(power_nets=["AVDD"])
+        info = normalizer.normalize("AVDD")
+
+        assert info.net_type == NetType.POWER
+        assert info.normalized_name == "AVDD"
+
+    def test_custom_power_nets_multiple(self) -> None:
+        """Test multiple custom power net names."""
+        normalizer = NetNormalizer(power_nets=["AVDD", "DVDD", "IOVDD"])
+
+        assert normalizer.normalize("AVDD").net_type == NetType.POWER
+        assert normalizer.normalize("DVDD").net_type == NetType.POWER
+        assert normalizer.normalize("IOVDD").net_type == NetType.POWER
+
+    def test_custom_ground_net_single(self) -> None:
+        """Test single custom ground net name."""
+        normalizer = NetNormalizer(ground_nets=["AVSS"])
+        info = normalizer.normalize("AVSS")
+
+        assert info.net_type == NetType.GROUND
+        assert info.normalized_name == "AVSS"
+
+    def test_custom_ground_nets_multiple(self) -> None:
+        """Test multiple custom ground net names."""
+        normalizer = NetNormalizer(ground_nets=["AVSS", "DVSS", "IOVSS"])
+
+        assert normalizer.normalize("AVSS").net_type == NetType.GROUND
+        assert normalizer.normalize("DVSS").net_type == NetType.GROUND
+        assert normalizer.normalize("IOVSS").net_type == NetType.GROUND
+
+    def test_custom_nets_case_insensitive(self) -> None:
+        """Test that custom net names are case-insensitive."""
+        normalizer = NetNormalizer(
+            power_nets=["AVDD"],
+            ground_nets=["AVSS"],
+        )
+
+        # Various case combinations should all match
+        assert normalizer.normalize("AVDD").net_type == NetType.POWER
+        assert normalizer.normalize("avdd").net_type == NetType.POWER
+        assert normalizer.normalize("Avdd").net_type == NetType.POWER
+        assert normalizer.normalize("AVSS").net_type == NetType.GROUND
+        assert normalizer.normalize("avss").net_type == NetType.GROUND
+
+    def test_custom_nets_with_underscore(self) -> None:
+        """Test custom net names with underscores."""
+        normalizer = NetNormalizer(
+            power_nets=["VDD_CORE", "VDD_IO", "VDD_PLL"],
+            ground_nets=["VSS_CORE", "VSS_IO"],
+        )
+
+        assert normalizer.normalize("VDD_CORE").net_type == NetType.POWER
+        assert normalizer.normalize("VDD_IO").net_type == NetType.POWER
+        assert normalizer.normalize("VSS_CORE").net_type == NetType.GROUND
+
+    def test_custom_nets_with_trailing_chars(self) -> None:
+        """Test that trailing ! is stripped before custom net matching."""
+        normalizer = NetNormalizer(power_nets=["AVDD"])
+        info = normalizer.normalize("AVDD!")
+
+        assert info.net_type == NetType.POWER
+        assert info.normalized_name == "AVDD"
+        assert info.original_name == "AVDD!"
+
+    def test_custom_nets_combined_with_defaults(self) -> None:
+        """Test that custom nets work alongside default patterns."""
+        normalizer = NetNormalizer(
+            power_nets=["AVDD"],  # Custom
+            ground_nets=["AVSS"],  # Custom
+        )
+
+        # Custom nets should work
+        assert normalizer.normalize("AVDD").net_type == NetType.POWER
+        assert normalizer.normalize("AVSS").net_type == NetType.GROUND
+
+        # Default patterns should still work
+        assert normalizer.normalize("VDD").net_type == NetType.POWER
+        assert normalizer.normalize("VDDA").net_type == NetType.POWER
+        assert normalizer.normalize("VSS").net_type == NetType.GROUND
+        assert normalizer.normalize("GND").net_type == NetType.GROUND
+
+    def test_custom_nets_priority_over_patterns(self) -> None:
+        """Test that custom nets take priority (though usually irrelevant)."""
+        # This tests that even if a name matches both custom and pattern,
+        # the custom check happens first (for performance)
+        normalizer = NetNormalizer(power_nets=["VDD"])  # Same as pattern
+
+        # Should still be detected as POWER
+        assert normalizer.normalize("VDD").net_type == NetType.POWER
+
+    def test_empty_custom_nets(self) -> None:
+        """Test that empty custom net lists work (uses only defaults)."""
+        normalizer = NetNormalizer(power_nets=[], ground_nets=[])
+
+        # Should use default patterns
+        assert normalizer.normalize("VDD").net_type == NetType.POWER
+        assert normalizer.normalize("VSS").net_type == NetType.GROUND
+        assert normalizer.normalize("clk").net_type == NetType.SIGNAL
+
+    def test_custom_nets_only_no_defaults(self) -> None:
+        """Test that unrecognized nets are still SIGNAL with custom nets."""
+        normalizer = NetNormalizer(
+            power_nets=["AVDD"],
+            ground_nets=["AVSS"],
+        )
+
+        # Unknown net should be SIGNAL
+        assert normalizer.normalize("custom_signal").net_type == NetType.SIGNAL
+
+    def test_custom_nets_from_tuple(self) -> None:
+        """Test that tuples work as input (any Iterable)."""
+        normalizer = NetNormalizer(
+            power_nets=("AVDD", "DVDD"),
+            ground_nets=("AVSS", "DVSS"),
+        )
+
+        assert normalizer.normalize("AVDD").net_type == NetType.POWER
+        assert normalizer.normalize("AVSS").net_type == NetType.GROUND
+
+    def test_custom_nets_from_generator(self) -> None:
+        """Test that generators work as input."""
+        def power_gen() -> Iterable[str]:
+            yield "AVDD"
+            yield "DVDD"
+
+        normalizer = NetNormalizer(power_nets=power_gen())
+
+        assert normalizer.normalize("AVDD").net_type == NetType.POWER
+        assert normalizer.normalize("DVDD").net_type == NetType.POWER

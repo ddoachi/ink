@@ -32,6 +32,7 @@ Example Usage:
 """
 
 import re
+from collections.abc import Iterable
 from typing import ClassVar
 
 from ink.domain.value_objects.net import NetInfo, NetType
@@ -45,7 +46,8 @@ class NetNormalizer:
        - Bus notation <N> → [N] (e.g., "data<7>" → "data[7]")
        - Strips trailing special characters (!, ?)
     2. **Classification**: Identifies net type (SIGNAL, POWER, GROUND)
-       based on pattern matching against known power/ground net names.
+       based on exact name matching and pattern matching against known
+       power/ground net names.
 
     Results are cached for performance - repeated calls with the same net name
     return the same NetInfo object without reprocessing.
@@ -56,12 +58,19 @@ class NetNormalizer:
         BUS_PATTERN: Compiled regex for detecting bus notation.
 
     Example:
+        >>> # Default patterns
         >>> normalizer = NetNormalizer()
         >>> info = normalizer.normalize("VDDA!")
         >>> info.net_type == NetType.POWER
         True
-        >>> info.normalized_name
-        'VDDA'
+
+        >>> # Custom individual net names
+        >>> normalizer = NetNormalizer(
+        ...     power_nets=["AVDD", "DVDD", "IOVDD"],
+        ...     ground_nets=["AVSS", "DVSS"]
+        ... )
+        >>> normalizer.normalize("AVDD").net_type == NetType.POWER
+        True
     """
 
     # Known power net patterns - case insensitive matching
@@ -93,12 +102,43 @@ class NetNormalizer:
     # Note: Currently only single-bit bus notation is fully supported
     BUS_PATTERN: ClassVar[re.Pattern[str]] = re.compile(r"^(.+)<(\d+)(?::(\d+))?>$")
 
-    def __init__(self) -> None:
-        """Initialize the NetNormalizer with an empty cache.
+    def __init__(
+        self,
+        power_nets: Iterable[str] | None = None,
+        ground_nets: Iterable[str] | None = None,
+    ) -> None:
+        """Initialize the NetNormalizer with optional custom net names.
+
+        Args:
+            power_nets: Individual power net names to recognize (case-insensitive).
+                These are checked before pattern matching.
+                Example: ["AVDD", "DVDD", "IOVDD", "VDD_CORE"]
+            ground_nets: Individual ground net names to recognize (case-insensitive).
+                These are checked before pattern matching.
+                Example: ["AVSS", "DVSS", "VSS_CORE"]
 
         The cache stores NetInfo objects keyed by original net name to avoid
         repeated processing of the same net names.
+
+        Example:
+            >>> # Use only default patterns
+            >>> normalizer = NetNormalizer()
+
+            >>> # Add custom power/ground nets
+            >>> normalizer = NetNormalizer(
+            ...     power_nets=["AVDD", "DVDD"],
+            ...     ground_nets=["AVSS", "DVSS"]
+            ... )
         """
+        # Store custom power/ground net names as uppercase sets for O(1) lookup
+        # Case-insensitive: we store uppercase and compare uppercase
+        self._power_nets: set[str] = (
+            {name.upper() for name in power_nets} if power_nets else set()
+        )
+        self._ground_nets: set[str] = (
+            {name.upper() for name in ground_nets} if ground_nets else set()
+        )
+
         # Cache for normalized net info - maps original name to NetInfo
         # This significantly improves performance for large netlists where
         # the same net names appear many times (e.g., VDD, VSS on every cell)
@@ -202,31 +242,43 @@ class NetNormalizer:
     def _classify_type(self, net_name: str) -> NetType:
         """Classify a net name as POWER, GROUND, or SIGNAL.
 
-        Uses regex pattern matching against known power and ground net patterns.
-        Matching is case-insensitive to handle variations like VDD, Vdd, vdd.
+        Classification priority:
+        1. Custom individual net names (exact match, case-insensitive)
+        2. Default regex patterns (case-insensitive)
 
         Args:
             net_name: Net name to classify (should be already cleaned of
                 trailing special characters).
 
         Returns:
-            NetType.POWER if matches power patterns (VDD, VCC, VPWR, etc.)
-            NetType.GROUND if matches ground patterns (VSS, GND, VGND, etc.)
+            NetType.POWER if matches power nets/patterns (VDD, VCC, VPWR, etc.)
+            NetType.GROUND if matches ground nets/patterns (VSS, GND, VGND, etc.)
             NetType.SIGNAL otherwise (default for all other nets)
 
         Example:
-            >>> normalizer = NetNormalizer()
-            >>> normalizer._classify_type("VDD")
+            >>> normalizer = NetNormalizer(power_nets=["AVDD"])
+            >>> normalizer._classify_type("AVDD")
+            <NetType.POWER: 'power'>
+            >>> normalizer._classify_type("VDD")  # Still matches pattern
             <NetType.POWER: 'power'>
             >>> normalizer._classify_type("clk")
             <NetType.SIGNAL: 'signal'>
         """
-        # Check against all power patterns (case-insensitive)
+        # Convert to uppercase for case-insensitive comparison
+        net_name_upper = net_name.upper()
+
+        # Priority 1: Check custom individual net names (O(1) set lookup)
+        if net_name_upper in self._power_nets:
+            return NetType.POWER
+        if net_name_upper in self._ground_nets:
+            return NetType.GROUND
+
+        # Priority 2: Check against default power patterns (case-insensitive)
         for pattern in self.POWER_PATTERNS:
             if re.match(pattern, net_name, re.IGNORECASE):
                 return NetType.POWER
 
-        # Check against all ground patterns (case-insensitive)
+        # Priority 3: Check against default ground patterns (case-insensitive)
         for pattern in self.GROUND_PATTERNS:
             if re.match(pattern, net_name, re.IGNORECASE):
                 return NetType.GROUND
