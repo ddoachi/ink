@@ -109,6 +109,11 @@ class InkMainWindow(QMainWindow):
     # Instance attribute type hints for IDE/type checker support
     app_settings: AppSettings
     schematic_canvas: SchematicCanvas
+    # Menu bar menus (E06-F02-T01)
+    file_menu: QMenu
+    edit_menu: QMenu
+    view_menu: QMenu
+    help_menu: QMenu
     recent_files_menu: QMenu
     panel_state_manager: PanelStateManager
     hierarchy_panel: HierarchyPanel
@@ -370,67 +375,142 @@ class InkMainWindow(QMainWindow):
         self._toolbar = toolbar
 
     def _setup_menus(self) -> None:
-        """Set up application menu bar with File and Help menus.
+        """Set up application menu bar with File, Edit, View, and Help menus.
 
-        Creates the main menu structure:
-        - File menu with Open, Open Recent submenu, and Exit actions
-        - Help menu with Settings submenu for settings management
+        Creates the main menu structure with all top-level menus in standard order.
+        Each menu is stored as an instance variable for access by other components.
+        Helper methods delegate menu population to keep code organized.
 
-        Menu Structure:
-            File
+        Menu Structure (E06-F02-T01):
+            File (E06-F02-T02 will populate)
             ├── Open... (Ctrl+O)
             ├── Open Recent ►
-            │   ├── 1. file1.ckt
-            │   ├── 2. file2.ckt
-            │   ├── ───────────
-            │   └── Clear Recent Files
             ├── ─────────────
             └── Exit (Ctrl+Q)
 
-            Help
+            Edit (E06-F02-T03 will populate)
+            └── (stub - populated by T03)
+
+            View (E06-F02-T04 will populate)
+            └── (stub - populated by T04)
+
+            Help (E06-F02-T04 will populate)
             ├── ─────────────
             └── Settings ►
-                ├── Reset Window Layout
-                ├── Clear Recent Files
-                ├── ─────────────
-                ├── Reset All Settings...
-                ├── ─────────────
-                └── Show Settings File Location
+
+        The menus use mnemonics (& prefix) for Alt+key access:
+        - &File → Alt+F
+        - &Edit → Alt+E
+        - &View → Alt+V
+        - &Help → Alt+H
+
+        See Also:
+            - E06-F02-T01: Menu bar setup (this task)
+            - E06-F02-T02: File menu actions
+            - E06-F02-T03: Edit menu actions
+            - E06-F02-T04: View and Help menu actions
         """
+        # Get the menu bar (automatically created by QMainWindow)
         menubar = self.menuBar()
 
         # =================================================================
-        # File Menu
+        # Create all four top-level menus in standard order
+        # Store as instance variables for access by other components
         # =================================================================
-        file_menu = menubar.addMenu("&File")
 
+        # File Menu - first in order, mnemonic Alt+F
+        self.file_menu = menubar.addMenu("&File")
+        self._create_file_menu()
+
+        # Edit Menu - second in order, mnemonic Alt+E
+        self.edit_menu = menubar.addMenu("&Edit")
+        self._create_edit_menu()
+
+        # View Menu - third in order, mnemonic Alt+V
+        self.view_menu = menubar.addMenu("&View")
+        self._create_view_menu()
+
+        # Help Menu - last in order (standard placement), mnemonic Alt+H
+        self.help_menu = menubar.addMenu("&Help")
+        self._create_help_menu()
+
+    def _create_file_menu(self) -> None:
+        """Create File menu items.
+
+        Populates the File menu with:
+        - Open... (Ctrl+O): Opens file dialog for netlist selection
+        - Open Recent: Submenu with recently opened files
+        - Exit (Ctrl+Q): Closes the application
+
+        This method contains the existing File menu implementation.
+        Future tasks may add additional items (Save, Export, etc.)
+
+        See Also:
+            - E06-F02-T02: Will add additional file operations
+            - E06-F06-T03: Recent files management
+        """
         # Open action - opens file dialog for netlist selection
-        open_action = file_menu.addAction("&Open...")
+        open_action = self.file_menu.addAction("&Open...")
         open_action.setShortcut("Ctrl+O")
         open_action.triggered.connect(self._on_open_file_dialog)
 
         # Recent files submenu - dynamically populated from settings
         # Menu is stored as instance attribute for updates
-        self.recent_files_menu = file_menu.addMenu("Open &Recent")
+        self.recent_files_menu = self.file_menu.addMenu("Open &Recent")
 
-        file_menu.addSeparator()
+        self.file_menu.addSeparator()
 
         # Exit action - closes the application
-        exit_action = file_menu.addAction("E&xit")
+        exit_action = self.file_menu.addAction("E&xit")
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
 
-        # =================================================================
-        # Help Menu
-        # =================================================================
-        help_menu = menubar.addMenu("&Help")
+    def _create_edit_menu(self) -> None:
+        """Create Edit menu items.
 
+        Currently a stub - will be populated by E06-F02-T03 with:
+        - Undo/Redo actions
+        - Selection actions
+        - Copy/Paste operations
+
+        See Also:
+            - E06-F02-T03: Edit menu actions implementation
+        """
+        # Stub: Edit menu items will be added by E06-F02-T03
+        pass
+
+    def _create_view_menu(self) -> None:
+        """Create View menu items.
+
+        Currently a stub - will be populated by E06-F02-T04 with:
+        - Zoom controls
+        - Panel visibility toggles
+        - Layout options
+
+        See Also:
+            - E06-F02-T04: View and Help menu actions implementation
+        """
+        # Stub: View menu items will be added by E06-F02-T04
+        pass
+
+    def _create_help_menu(self) -> None:
+        """Create Help menu items.
+
+        Populates the Help menu with:
+        - Settings submenu for application settings management
+
+        Future tasks may add additional help items (About, Documentation, etc.)
+
+        See Also:
+            - E06-F02-T04: Will add additional help items
+            - E06-F06-T04: Settings management functionality
+        """
         # Add separator before settings submenu
-        help_menu.addSeparator()
+        self.help_menu.addSeparator()
 
         # Settings submenu for settings management
         settings_menu = QMenu("&Settings", self)
-        help_menu.addMenu(settings_menu)
+        self.help_menu.addMenu(settings_menu)
 
         # Reset Window Layout action
         reset_geometry_action = settings_menu.addAction("Reset Window Layout")
