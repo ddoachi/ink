@@ -6,9 +6,13 @@ unique identifier.
 
 This module exports:
 - Identifier types (CellId, NetId, PinId, PortId) for strong typing
+- Geometry types (Point, LineSegment, NetGeometry) for net routing
 - PinDirection enum for signal flow direction
 - Parsing-related value objects (CellInstance, NetInfo, SubcircuitDefinition)
 """
+
+# Geometry value objects (for net routing representation)
+from ink.domain.value_objects.geometry import LineSegment, NetGeometry, Point
 
 # Identifier types (NewType wrappers for compile-time type safety)
 from ink.domain.value_objects.identifiers import CellId, NetId, PinId, PortId
@@ -22,16 +26,16 @@ from ink.domain.value_objects.pin_direction import PinDirection
 from ink.domain.value_objects.subcircuit import SubcircuitDefinition
 
 __all__ = [
-    # Identifiers
     "CellId",
-    # Parsing value objects
     "CellInstance",
+    "LineSegment",
+    "NetGeometry",
     "NetId",
     "NetInfo",
     "NetType",
-    # Enums
     "PinDirection",
     "PinId",
+    "Point",
     "PortId",
     "SubcircuitDefinition",
 ]
