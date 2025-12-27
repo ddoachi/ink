@@ -918,3 +918,157 @@ class TestIntegration:
         inv = design.get_cell_by_name("XI1")
         assert inv is not None
         assert inv.is_latch() is False
+
+
+# =============================================================================
+# TestSequentialCellQueries: Query Methods for Sequential Cells (E01-F04-T03)
+# =============================================================================
+
+
+class TestGetSequentialCells:
+    """Tests for get_sequential_cells() query method.
+
+    This method returns a list of all sequential cells (flip-flops, latches)
+    in the design. Used for expansion boundary detection and analysis.
+    """
+
+    def test_get_sequential_cells_returns_only_sequential(self) -> None:
+        """Should return only cells where is_sequential=True."""
+        design = Design(name="test")
+
+        # Add mix of cells
+        comb1 = create_test_cell("XI1", cell_type="INV_X1", is_sequential=False)
+        comb2 = create_test_cell("XI2", cell_type="AND2_X1", is_sequential=False)
+        seq1 = create_test_cell("XFF1", cell_type="DFF_X1", is_sequential=True)
+        seq2 = create_test_cell("XFF2", cell_type="LATCH_X1", is_sequential=True)
+
+        design.add_cell(comb1)
+        design.add_cell(comb2)
+        design.add_cell(seq1)
+        design.add_cell(seq2)
+
+        result = design.get_sequential_cells()
+
+        assert len(result) == 2
+        assert seq1 in result
+        assert seq2 in result
+        assert comb1 not in result
+        assert comb2 not in result
+
+    def test_get_sequential_cells_empty_when_no_sequential(self) -> None:
+        """Should return empty list when no sequential cells exist."""
+        design = Design(name="test")
+
+        # Add only combinational cells
+        design.add_cell(create_test_cell("XI1", cell_type="INV_X1", is_sequential=False))
+        design.add_cell(create_test_cell("XI2", cell_type="AND2_X1", is_sequential=False))
+
+        result = design.get_sequential_cells()
+
+        assert result == []
+
+    def test_get_sequential_cells_empty_design(self) -> None:
+        """Should return empty list for empty design."""
+        design = Design(name="test")
+
+        result = design.get_sequential_cells()
+
+        assert result == []
+
+    def test_get_sequential_cells_returns_copy(self) -> None:
+        """Modifying returned list should not affect internal storage."""
+        design = Design(name="test")
+        seq = create_test_cell("XFF1", cell_type="DFF_X1", is_sequential=True)
+        design.add_cell(seq)
+
+        result = design.get_sequential_cells()
+        result.clear()
+
+        # Internal storage should be unaffected
+        assert design.sequential_cell_count() == 1
+
+    def test_get_sequential_cells_all_sequential(self) -> None:
+        """Should return all cells when all are sequential."""
+        design = Design(name="test")
+
+        seq1 = create_test_cell("XFF1", cell_type="DFF_X1", is_sequential=True)
+        seq2 = create_test_cell("XFF2", cell_type="DFF_X1", is_sequential=True)
+        seq3 = create_test_cell("XLATCH", cell_type="LATCH_X1", is_sequential=True)
+
+        design.add_cell(seq1)
+        design.add_cell(seq2)
+        design.add_cell(seq3)
+
+        result = design.get_sequential_cells()
+
+        assert len(result) == 3
+        assert design.cell_count() == design.sequential_cell_count()
+
+
+class TestIsSequentialCell:
+    """Tests for is_sequential_cell(name) query method.
+
+    This method provides O(1) lookup to check if a named cell is sequential.
+    Critical for expansion boundary detection during schematic exploration.
+    """
+
+    def test_is_sequential_cell_true_for_dff(self) -> None:
+        """Should return True for flip-flop cells."""
+        design = Design(name="test")
+        design.add_cell(create_test_cell("XFF1", cell_type="DFF_X1", is_sequential=True))
+
+        assert design.is_sequential_cell("XFF1") is True
+
+    def test_is_sequential_cell_true_for_latch(self) -> None:
+        """Should return True for latch cells."""
+        design = Design(name="test")
+        design.add_cell(create_test_cell("XLATCH", cell_type="LATCH_X1", is_sequential=True))
+
+        assert design.is_sequential_cell("XLATCH") is True
+
+    def test_is_sequential_cell_false_for_combinational(self) -> None:
+        """Should return False for combinational cells."""
+        design = Design(name="test")
+        design.add_cell(create_test_cell("XI1", cell_type="INV_X1", is_sequential=False))
+        design.add_cell(create_test_cell("XAND", cell_type="AND2_X1", is_sequential=False))
+
+        assert design.is_sequential_cell("XI1") is False
+        assert design.is_sequential_cell("XAND") is False
+
+    def test_is_sequential_cell_raises_for_nonexistent(self) -> None:
+        """Should raise KeyError when cell not found."""
+        design = Design(name="test")
+        design.add_cell(create_test_cell("XI1", cell_type="INV_X1"))
+
+        with pytest.raises(KeyError, match=r"Cell .* not found"):
+            design.is_sequential_cell("NONEXISTENT")
+
+    def test_is_sequential_cell_empty_design_raises(self) -> None:
+        """Should raise KeyError when querying empty design."""
+        design = Design(name="test")
+
+        with pytest.raises(KeyError, match=r"Cell .* not found"):
+            design.is_sequential_cell("ANY_CELL")
+
+    def test_is_sequential_cell_default_false(self) -> None:
+        """Cells created without is_sequential flag should return False."""
+        design = Design(name="test")
+        # Create cell without explicit is_sequential (defaults to False)
+        design.add_cell(create_test_cell("XI1", cell_type="INV_X1"))
+
+        assert design.is_sequential_cell("XI1") is False
+
+    def test_is_sequential_cell_multiple_queries(self) -> None:
+        """Should handle multiple queries correctly."""
+        design = Design(name="test")
+
+        design.add_cell(create_test_cell("XI1", cell_type="INV_X1", is_sequential=False))
+        design.add_cell(create_test_cell("XFF1", cell_type="DFF_X1", is_sequential=True))
+        design.add_cell(create_test_cell("XI2", cell_type="NAND2_X1", is_sequential=False))
+        design.add_cell(create_test_cell("XFF2", cell_type="SDFFR_X1", is_sequential=True))
+
+        # Query all cells
+        assert design.is_sequential_cell("XI1") is False
+        assert design.is_sequential_cell("XFF1") is True
+        assert design.is_sequential_cell("XI2") is False
+        assert design.is_sequential_cell("XFF2") is True

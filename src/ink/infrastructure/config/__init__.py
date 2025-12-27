@@ -18,7 +18,7 @@ from ink.infrastructure.config.net_classification_config import (
 )
 
 __all__ = [
-    "NetClassificationConfig",
-    "LatchIdentificationConfig",
     "DEFAULT_SEQUENTIAL_PATTERNS",
+    "LatchIdentificationConfig",
+    "NetClassificationConfig",
 ]
