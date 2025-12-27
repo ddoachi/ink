@@ -145,9 +145,12 @@ class TestStateCaptureIntegration:
         """Test Qt state blobs are not empty."""
         state = manager_with_panels.capture_state()
 
-        # Qt blobs should have actual data
-        assert len(state.qt_state) > 0
-        assert len(state.qt_geometry) > 0
+        # Qt blobs should exist and have actual data
+        # Use .size() for QByteArray instead of len()
+        assert state.qt_state is not None
+        assert state.qt_geometry is not None
+        assert state.qt_state.size() > 0
+        assert state.qt_geometry.size() > 0
 
     def test_capture_state_updates_geometries(self, manager_with_panels: PanelStateManager) -> None:
         """Test capture_state updates panel geometries."""
