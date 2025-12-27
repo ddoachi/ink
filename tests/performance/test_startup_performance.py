@@ -125,9 +125,7 @@ class TestWindowCreationPerformance:
             f"Window creation took {elapsed:.3f}s, exceeds {CREATION_THRESHOLD}s limit"
         )
 
-    def test_average_creation_time(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_average_creation_time(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Test average window creation time over multiple iterations."""
         iterations = 5
         times: list[float] = []
@@ -158,9 +156,7 @@ class TestWindowCreationPerformance:
 class TestWindowShowPerformance:
     """Test window show() performance."""
 
-    def test_window_show_is_fast(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_window_show_is_fast(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Verify window show operation is fast."""
         window = InkMainWindow(app_settings)
 
@@ -185,9 +181,7 @@ class TestWindowShowPerformance:
 class TestStartupTime:
     """Test complete application startup time."""
 
-    def test_startup_under_2_seconds(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_startup_under_2_seconds(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Verify complete startup meets 2-second requirement.
 
         This is the hard requirement from E06-F01 spec:
@@ -211,9 +205,7 @@ class TestStartupTime:
             f"Startup took {elapsed:.2f}s, exceeds {STARTUP_THRESHOLD}s limit"
         )
 
-    def test_cold_vs_warm_startup(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_cold_vs_warm_startup(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Compare cold vs warm startup times.
 
         First creation may be slower due to imports and initialization.
@@ -240,12 +232,8 @@ class TestStartupTime:
         qapp.processEvents()
 
         # Both should be under threshold
-        assert cold_time < STARTUP_THRESHOLD, (
-            f"Cold startup took {cold_time:.2f}s"
-        )
-        assert warm_time < STARTUP_THRESHOLD, (
-            f"Warm startup took {warm_time:.2f}s"
-        )
+        assert cold_time < STARTUP_THRESHOLD, f"Cold startup took {cold_time:.2f}s"
+        assert warm_time < STARTUP_THRESHOLD, f"Warm startup took {warm_time:.2f}s"
 
         # Warm should generally be faster (but not always in CI)
         # Just log the difference for diagnostics
@@ -292,9 +280,7 @@ class TestMemoryUsage:
         final_window.deleteLater()
         qapp.processEvents()
 
-    def test_rapid_create_destroy(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_rapid_create_destroy(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Test rapid window creation/destruction doesn't crash.
 
         Rapidly creates and destroys windows without waiting for
@@ -323,9 +309,7 @@ class TestMemoryUsage:
 class TestComponentCreationPerformance:
     """Test individual component creation performance."""
 
-    def test_central_widget_creation(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_central_widget_creation(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Test central widget is created quickly."""
         window = InkMainWindow(app_settings)
 
@@ -335,9 +319,7 @@ class TestComponentCreationPerformance:
         window.deleteLater()
         qapp.processEvents()
 
-    def test_dock_widgets_creation(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_dock_widgets_creation(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Test dock widgets are created quickly."""
         window = InkMainWindow(app_settings)
 
@@ -349,9 +331,7 @@ class TestComponentCreationPerformance:
         window.deleteLater()
         qapp.processEvents()
 
-    def test_menu_bar_creation(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_menu_bar_creation(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Test menu bar is created quickly."""
         window = InkMainWindow(app_settings)
 
@@ -376,9 +356,7 @@ class TestBenchmarks:
     They provide detailed timing information for optimization work.
     """
 
-    def test_benchmark_window_creation(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_benchmark_window_creation(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Benchmark window creation with statistics."""
         times: list[float] = []
         iterations = 10
@@ -398,9 +376,7 @@ class TestBenchmarks:
         assert avg < 1.0, f"Average too high: {avg:.3f}s"
         assert min_time < 0.5, f"Minimum too high: {min_time:.3f}s"
 
-    def test_benchmark_full_startup(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_benchmark_full_startup(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Benchmark full startup with statistics."""
         times: list[float] = []
         iterations = 5
@@ -420,11 +396,7 @@ class TestBenchmarks:
 
         # All iterations should be under requirement
         for i, t in enumerate(times):
-            assert t < STARTUP_THRESHOLD, (
-                f"Iteration {i+1} took {t:.3f}s"
-            )
+            assert t < STARTUP_THRESHOLD, f"Iteration {i + 1} took {t:.3f}s"
 
         # Average should be well under threshold
-        assert avg < STARTUP_THRESHOLD * 0.8, (
-            f"Average {avg:.3f}s is too close to threshold"
-        )
+        assert avg < STARTUP_THRESHOLD * 0.8, f"Average {avg:.3f}s is too close to threshold"

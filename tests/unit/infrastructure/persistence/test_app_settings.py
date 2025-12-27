@@ -375,9 +375,7 @@ class TestSettingsMigration:
     - The migration framework handles version jumps correctly
     """
 
-    def test_migrate_if_needed_called_on_init(
-        self, isolated_settings: Path
-    ) -> None:
+    def test_migrate_if_needed_called_on_init(self, isolated_settings: Path) -> None:
         """Verify _migrate_if_needed is called during initialization."""
         # Pre-set an old version to simulate upgrade scenario
         temp_settings = QSettings("InkProject", "Ink")
@@ -390,17 +388,13 @@ class TestSettingsMigration:
         # Version should now be current
         assert settings.get_settings_version() == AppSettings.CURRENT_VERSION
 
-    def test_get_settings_version_returns_stored_version(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_get_settings_version_returns_stored_version(self, app_settings: AppSettings) -> None:
         """Verify get_settings_version returns the stored version."""
         version = app_settings.get_settings_version()
         assert version == AppSettings.CURRENT_VERSION
         assert isinstance(version, int)
 
-    def test_migration_applies_sequentially(
-        self, isolated_settings: Path
-    ) -> None:
+    def test_migration_applies_sequentially(self, isolated_settings: Path) -> None:
         """Verify migrations are applied in sequence from old to new version."""
         # Pre-set version 0 to simulate fresh install before versioning
         temp_settings = QSettings("InkProject", "Ink")
@@ -413,15 +407,11 @@ class TestSettingsMigration:
         # Version should be updated to current
         assert settings.get_settings_version() == AppSettings.CURRENT_VERSION
 
-    def test_no_migration_when_version_is_current(
-        self, isolated_settings: Path
-    ) -> None:
+    def test_no_migration_when_version_is_current(self, isolated_settings: Path) -> None:
         """Verify no migration runs when version is already current."""
         # Pre-set current version
         temp_settings = QSettings("InkProject", "Ink")
-        temp_settings.setValue(
-            AppSettings.KEY_SETTINGS_VERSION, AppSettings.CURRENT_VERSION
-        )
+        temp_settings.setValue(AppSettings.KEY_SETTINGS_VERSION, AppSettings.CURRENT_VERSION)
         temp_settings.setValue("test/key", "original_value")
         temp_settings.sync()
 
@@ -446,9 +436,7 @@ class TestSettingsReset:
     - reset_recent_files clears only recent files
     """
 
-    def test_reset_all_settings_clears_all(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_reset_all_settings_clears_all(self, app_settings: AppSettings) -> None:
         """Verify reset_all_settings clears all custom settings."""
         # Add custom settings
         app_settings.set_value("custom/key1", "value1")
@@ -462,9 +450,7 @@ class TestSettingsReset:
         assert not app_settings.has_key("custom/key1")
         assert not app_settings.has_key("custom/key2")
 
-    def test_reset_all_settings_reinitializes_defaults(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_reset_all_settings_reinitializes_defaults(self, app_settings: AppSettings) -> None:
         """Verify reset_all_settings re-initializes default values."""
         # Modify defaults
         app_settings.set_value(AppSettings.KEY_MAX_RECENT, 99)
@@ -478,18 +464,12 @@ class TestSettingsReset:
             app_settings.get_value(AppSettings.KEY_MAX_RECENT, value_type=int)
             == AppSettings.DEFAULT_MAX_RECENT
         )
-        assert (
-            app_settings.get_settings_version() == AppSettings.CURRENT_VERSION
-        )
+        assert app_settings.get_settings_version() == AppSettings.CURRENT_VERSION
 
-    def test_reset_all_settings_clears_recent_files(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_reset_all_settings_clears_recent_files(self, app_settings: AppSettings) -> None:
         """Verify reset_all_settings clears recent files list."""
         # Add recent files
-        app_settings.set_value(
-            AppSettings.KEY_RECENT_FILES, ["/path/to/file.ckt"]
-        )
+        app_settings.set_value(AppSettings.KEY_RECENT_FILES, ["/path/to/file.ckt"])
         app_settings.sync()
 
         # Reset
@@ -499,19 +479,13 @@ class TestSettingsReset:
         recent = app_settings.get_value(AppSettings.KEY_RECENT_FILES)
         assert recent == []
 
-    def test_reset_window_geometry_clears_geometry(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_reset_window_geometry_clears_geometry(self, app_settings: AppSettings) -> None:
         """Verify reset_window_geometry clears geometry settings."""
         from PySide6.QtCore import QByteArray
 
         # Set geometry values
-        app_settings.set_value(
-            AppSettings.KEY_WINDOW_GEOMETRY, QByteArray(b"geometry_data")
-        )
-        app_settings.set_value(
-            AppSettings.KEY_WINDOW_STATE, QByteArray(b"state_data")
-        )
+        app_settings.set_value(AppSettings.KEY_WINDOW_GEOMETRY, QByteArray(b"geometry_data"))
+        app_settings.set_value(AppSettings.KEY_WINDOW_STATE, QByteArray(b"state_data"))
         app_settings.sync()
 
         # Reset geometry
@@ -528,9 +502,7 @@ class TestSettingsReset:
         from PySide6.QtCore import QByteArray
 
         # Set geometry and other settings
-        app_settings.set_value(
-            AppSettings.KEY_WINDOW_GEOMETRY, QByteArray(b"geometry")
-        )
+        app_settings.set_value(AppSettings.KEY_WINDOW_GEOMETRY, QByteArray(b"geometry"))
         app_settings.set_value("other/setting", "preserved")
         app_settings.sync()
 
@@ -540,14 +512,10 @@ class TestSettingsReset:
         # Other settings should remain
         assert app_settings.get_value("other/setting") == "preserved"
 
-    def test_reset_recent_files_clears_list(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_reset_recent_files_clears_list(self, app_settings: AppSettings) -> None:
         """Verify reset_recent_files clears the recent files list."""
         # Add recent files
-        app_settings.set_value(
-            AppSettings.KEY_RECENT_FILES, ["/file1.ckt", "/file2.ckt"]
-        )
+        app_settings.set_value(AppSettings.KEY_RECENT_FILES, ["/file1.ckt", "/file2.ckt"])
         app_settings.sync()
 
         # Reset recent files
@@ -557,14 +525,10 @@ class TestSettingsReset:
         recent = app_settings.get_value(AppSettings.KEY_RECENT_FILES)
         assert recent == []
 
-    def test_reset_recent_files_preserves_other_settings(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_reset_recent_files_preserves_other_settings(self, app_settings: AppSettings) -> None:
         """Verify reset_recent_files doesn't affect other settings."""
         # Set recent files and other settings
-        app_settings.set_value(
-            AppSettings.KEY_RECENT_FILES, ["/file.ckt"]
-        )
+        app_settings.set_value(AppSettings.KEY_RECENT_FILES, ["/file.ckt"])
         app_settings.set_value("other/key", "value")
         app_settings.sync()
 
@@ -589,16 +553,12 @@ class TestSettingsDiagnostics:
     - is_corrupted detects corrupted settings
     """
 
-    def test_get_all_settings_returns_dict(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_get_all_settings_returns_dict(self, app_settings: AppSettings) -> None:
         """Verify get_all_settings returns a dictionary."""
         result = app_settings.get_all_settings()
         assert isinstance(result, dict)
 
-    def test_get_all_settings_includes_all_keys(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_get_all_settings_includes_all_keys(self, app_settings: AppSettings) -> None:
         """Verify get_all_settings includes all stored keys."""
         app_settings.set_value("test/key1", "value1")
         app_settings.set_value("test/key2", "value2")
@@ -610,9 +570,7 @@ class TestSettingsDiagnostics:
         assert all_settings["test/key1"] == "value1"
         assert all_settings["test/key2"] == "value2"
 
-    def test_export_settings_creates_file(
-        self, app_settings: AppSettings, tmp_path: Path
-    ) -> None:
+    def test_export_settings_creates_file(self, app_settings: AppSettings, tmp_path: Path) -> None:
         """Verify export_settings creates a file."""
         export_path = tmp_path / "settings_export.json"
 
@@ -660,9 +618,7 @@ class TestSettingsDiagnostics:
         assert data["test/bytes"]["_type"] == "QByteArray"
         assert "_data" in data["test/bytes"]
 
-    def test_is_corrupted_returns_false_for_valid_settings(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_is_corrupted_returns_false_for_valid_settings(self, app_settings: AppSettings) -> None:
         """Verify is_corrupted returns False for valid settings."""
         assert app_settings.is_corrupted() is False
 

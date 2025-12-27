@@ -75,9 +75,7 @@ def app_settings(isolated_settings: Path) -> AppSettings:
 
 
 @pytest.fixture
-def window(
-    qapp: QApplication, app_settings: AppSettings
-) -> Generator[InkMainWindow, None, None]:
+def window(qapp: QApplication, app_settings: AppSettings) -> Generator[InkMainWindow, None, None]:
     """Create main window for each test and cleanup after."""
     win = InkMainWindow(app_settings)
     yield win
@@ -148,35 +146,22 @@ class TestE06F01AcceptanceCriteria:
         assert window.message_dock is not None
         assert window.message_dock.windowTitle() == "Messages"
 
-    def test_ac_dock_widgets_in_correct_positions(
-        self, window: InkMainWindow
-    ) -> None:
+    def test_ac_dock_widgets_in_correct_positions(self, window: InkMainWindow) -> None:
         """AC: Docks are in correct positions (left, right, bottom)."""
         # Hierarchy dock is in left area
-        assert (
-            window.dockWidgetArea(window.hierarchy_dock)
-            == Qt.DockWidgetArea.LeftDockWidgetArea
-        )
+        assert window.dockWidgetArea(window.hierarchy_dock) == Qt.DockWidgetArea.LeftDockWidgetArea
 
         # Property dock is in right area
-        assert (
-            window.dockWidgetArea(window.property_dock)
-            == Qt.DockWidgetArea.RightDockWidgetArea
-        )
+        assert window.dockWidgetArea(window.property_dock) == Qt.DockWidgetArea.RightDockWidgetArea
 
         # Message dock is in bottom area
-        assert (
-            window.dockWidgetArea(window.message_dock)
-            == Qt.DockWidgetArea.BottomDockWidgetArea
-        )
+        assert window.dockWidgetArea(window.message_dock) == Qt.DockWidgetArea.BottomDockWidgetArea
 
     # -------------------------------------------------------------------------
     # AC: All dock widgets can be closed, floated, and re-docked
     # -------------------------------------------------------------------------
 
-    def test_ac_dock_widgets_can_be_closed(
-        self, window: InkMainWindow, qapp: QApplication
-    ) -> None:
+    def test_ac_dock_widgets_can_be_closed(self, window: InkMainWindow, qapp: QApplication) -> None:
         """AC: All dock widgets can be closed."""
         # Close each dock and verify
         window.hierarchy_dock.close()
@@ -229,18 +214,13 @@ class TestE06F01AcceptanceCriteria:
         assert not window.hierarchy_dock.isFloating()
 
         # Verify it's back in correct area
-        assert (
-            window.dockWidgetArea(window.hierarchy_dock)
-            == Qt.DockWidgetArea.LeftDockWidgetArea
-        )
+        assert window.dockWidgetArea(window.hierarchy_dock) == Qt.DockWidgetArea.LeftDockWidgetArea
 
     # -------------------------------------------------------------------------
     # AC: Window can be minimized, maximized, and closed
     # -------------------------------------------------------------------------
 
-    def test_ac_window_can_be_minimized(
-        self, window: InkMainWindow, qapp: QApplication
-    ) -> None:
+    def test_ac_window_can_be_minimized(self, window: InkMainWindow, qapp: QApplication) -> None:
         """AC: Window can be minimized."""
         window.show()
         qapp.processEvents()
@@ -252,9 +232,7 @@ class TestE06F01AcceptanceCriteria:
 
         window.close()
 
-    def test_ac_window_can_be_maximized(
-        self, window: InkMainWindow, qapp: QApplication
-    ) -> None:
+    def test_ac_window_can_be_maximized(self, window: InkMainWindow, qapp: QApplication) -> None:
         """AC: Window can be maximized."""
         window.show()
         qapp.processEvents()
@@ -266,9 +244,7 @@ class TestE06F01AcceptanceCriteria:
 
         window.close()
 
-    def test_ac_window_can_be_closed(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_ac_window_can_be_closed(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """AC: Window can be closed."""
         window = InkMainWindow(app_settings)
         window.show()
@@ -373,30 +349,19 @@ class TestE06F01UserStories:
     def test_us_left_panel_hierarchy(self, window: InkMainWindow) -> None:
         """US: Left panel: Design hierarchy / object tree (collapsible)."""
         assert window.hierarchy_dock is not None
-        assert (
-            window.dockWidgetArea(window.hierarchy_dock)
-            == Qt.DockWidgetArea.LeftDockWidgetArea
-        )
+        assert window.dockWidgetArea(window.hierarchy_dock) == Qt.DockWidgetArea.LeftDockWidgetArea
 
     def test_us_right_panel_properties(self, window: InkMainWindow) -> None:
         """US: Right panel: Property inspector (collapsible)."""
         assert window.property_dock is not None
-        assert (
-            window.dockWidgetArea(window.property_dock)
-            == Qt.DockWidgetArea.RightDockWidgetArea
-        )
+        assert window.dockWidgetArea(window.property_dock) == Qt.DockWidgetArea.RightDockWidgetArea
 
     def test_us_bottom_panel_messages(self, window: InkMainWindow) -> None:
         """US: Bottom panel: Messages / search results (collapsible)."""
         assert window.message_dock is not None
-        assert (
-            window.dockWidgetArea(window.message_dock)
-            == Qt.DockWidgetArea.BottomDockWidgetArea
-        )
+        assert window.dockWidgetArea(window.message_dock) == Qt.DockWidgetArea.BottomDockWidgetArea
 
-    def test_us_panels_are_collapsible(
-        self, window: InkMainWindow, qapp: QApplication
-    ) -> None:
+    def test_us_panels_are_collapsible(self, window: InkMainWindow, qapp: QApplication) -> None:
         """US: Panels remember size and visibility (closable = collapsible)."""
         # Verify all panels can be closed (collapsed)
         window.hierarchy_dock.close()

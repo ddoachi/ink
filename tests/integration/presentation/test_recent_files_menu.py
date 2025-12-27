@@ -81,9 +81,7 @@ def app_settings(isolated_settings: Path) -> AppSettings:
 
 
 @pytest.fixture
-def main_window(
-    qtbot: QtBot, app_settings: AppSettings
-) -> Generator[InkMainWindow, None, None]:
+def main_window(qtbot: QtBot, app_settings: AppSettings) -> Generator[InkMainWindow, None, None]:
     """Create InkMainWindow instance with AppSettings.
 
     Args:
@@ -150,9 +148,7 @@ class TestMainWindowHasRecentFilesMenu:
 
         assert file_menu is not None
 
-    def test_file_menu_has_open_recent_submenu(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_file_menu_has_open_recent_submenu(self, main_window: InkMainWindow) -> None:
         """Test that File menu has Open Recent submenu."""
         # Use the stored recent_files_menu attribute directly
         # This is more robust than searching through menu actions
@@ -162,9 +158,7 @@ class TestMainWindowHasRecentFilesMenu:
         # Verify the menu title contains "Recent"
         assert "Recent" in main_window.recent_files_menu.title()
 
-    def test_has_recent_files_menu_attribute(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_has_recent_files_menu_attribute(self, main_window: InkMainWindow) -> None:
         """Test that InkMainWindow has recent_files_menu attribute."""
         assert hasattr(main_window, "recent_files_menu")
         assert isinstance(main_window.recent_files_menu, QMenu)
@@ -173,9 +167,7 @@ class TestMainWindowHasRecentFilesMenu:
 class TestRecentFilesMenuContent:
     """Test recent files menu content and display."""
 
-    def test_empty_menu_shows_no_recent_files(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_empty_menu_shows_no_recent_files(self, main_window: InkMainWindow) -> None:
         """Test that empty menu shows 'No Recent Files' placeholder."""
         actions = main_window.recent_files_menu.actions()
 
@@ -204,9 +196,7 @@ class TestRecentFilesMenuContent:
         assert "test1.ckt" in actions[0].text()
         assert "test0.ckt" in actions[1].text()
 
-    def test_menu_items_numbered(
-        self, main_window: InkMainWindow, temp_files: list[str]
-    ) -> None:
+    def test_menu_items_numbered(self, main_window: InkMainWindow, temp_files: list[str]) -> None:
         """Test that menu items are numbered 1-9."""
         # Add files
         for i in range(5):
@@ -221,9 +211,7 @@ class TestRecentFilesMenuContent:
         assert "&2." in actions[1].text() or "2." in actions[1].text()
         assert "&3." in actions[2].text() or "3." in actions[2].text()
 
-    def test_menu_has_clear_action(
-        self, main_window: InkMainWindow, temp_files: list[str]
-    ) -> None:
+    def test_menu_has_clear_action(self, main_window: InkMainWindow, temp_files: list[str]) -> None:
         """Test that menu has 'Clear Recent Files' action when files exist."""
         main_window.app_settings.add_recent_file(temp_files[0])
         main_window._update_recent_files_menu()
@@ -360,17 +348,13 @@ class TestRecentFilesMenuMissingFile:
 class TestFormatRecentFileName:
     """Test _format_recent_file_name helper method."""
 
-    def test_format_includes_number(
-        self, main_window: InkMainWindow, tmp_path: Path
-    ) -> None:
+    def test_format_includes_number(self, main_window: InkMainWindow, tmp_path: Path) -> None:
         """Test that format includes file number."""
         file_path = str(tmp_path / "test.ckt")
         result = main_window._format_recent_file_name(file_path, 0)
         assert "1." in result  # Index 0 -> number 1
 
-    def test_format_includes_filename(
-        self, main_window: InkMainWindow, tmp_path: Path
-    ) -> None:
+    def test_format_includes_filename(self, main_window: InkMainWindow, tmp_path: Path) -> None:
         """Test that format includes filename."""
         file_path = str(tmp_path / "mydesign.ckt")
         result = main_window._format_recent_file_name(file_path, 0)
@@ -386,9 +370,7 @@ class TestFormatRecentFileName:
             result = main_window._format_recent_file_name(file_path, i)
             assert f"&{i + 1}." in result
 
-    def test_format_no_shortcut_for_tenth(
-        self, main_window: InkMainWindow, tmp_path: Path
-    ) -> None:
+    def test_format_no_shortcut_for_tenth(self, main_window: InkMainWindow, tmp_path: Path) -> None:
         """Test that item 10+ has no & shortcut."""
         file_path = str(tmp_path / "test.ckt")
         result = main_window._format_recent_file_name(file_path, 9)
@@ -405,16 +387,12 @@ class TestMainWindowFileOpen:
         assert hasattr(main_window, "_open_file")
         assert callable(main_window._open_file)
 
-    def test_has_on_open_recent_file_method(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_has_on_open_recent_file_method(self, main_window: InkMainWindow) -> None:
         """Test that _on_open_recent_file method exists."""
         assert hasattr(main_window, "_on_open_recent_file")
         assert callable(main_window._on_open_recent_file)
 
-    def test_has_update_recent_files_menu_method(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_has_update_recent_files_menu_method(self, main_window: InkMainWindow) -> None:
         """Test that _update_recent_files_menu method exists."""
         assert hasattr(main_window, "_update_recent_files_menu")
         assert callable(main_window._update_recent_files_menu)

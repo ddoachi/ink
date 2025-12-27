@@ -41,10 +41,12 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QStatusBar,
+    QToolBar,
 )
 
 from ink.presentation.canvas import SchematicCanvas
 from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
+from ink.presentation.state import PanelStateManager
 
 if TYPE_CHECKING:
     from ink.infrastructure.persistence.app_settings import AppSettings
@@ -81,6 +83,7 @@ class InkMainWindow(QMainWindow):
         app_settings: Application settings manager for recent files persistence.
         schematic_canvas: The central canvas widget for schematic visualization.
         recent_files_menu: Submenu for displaying recent files.
+        panel_state_manager: Manages panel state tracking and visibility control.
         hierarchy_panel: Placeholder for hierarchy tree (full impl: E04-F01).
         hierarchy_dock: Dock widget containing hierarchy_panel.
         property_panel: Placeholder for property inspector (full impl: E04-F04).
@@ -108,13 +111,20 @@ class InkMainWindow(QMainWindow):
     # Instance attribute type hints for IDE/type checker support
     app_settings: AppSettings
     schematic_canvas: SchematicCanvas
+    # Menu bar menus (E06-F02-T01)
+    file_menu: QMenu
+    edit_menu: QMenu
+    view_menu: QMenu
+    help_menu: QMenu
     recent_files_menu: QMenu
+    panel_state_manager: PanelStateManager
     hierarchy_panel: HierarchyPanel
     hierarchy_dock: QDockWidget
     property_panel: PropertyPanel
     property_dock: QDockWidget
     message_panel: MessagePanel
     message_dock: QDockWidget
+    _toolbar: QToolBar
 
     # Status bar widget type hints (E06-F04-T01)
     file_label: QLabel
@@ -175,6 +185,7 @@ class InkMainWindow(QMainWindow):
         self._setup_dock_widgets()
         self._setup_status_bar()
         self._setup_menus()
+        self._setup_toolbar()
 
         # Restore geometry AFTER all widgets are created
         self._restore_geometry()
@@ -308,68 +319,207 @@ class InkMainWindow(QMainWindow):
             }
         """)
 
+    def _setup_toolbar(self) -> None:
+        """Create and configure the main toolbar.
+
+        Creates a QToolBar with standard configuration for hosting action
+        buttons. The toolbar is set up as infrastructure for subsequent
+        tasks (E06-F03-T02, E06-F03-T03) to add actual action buttons.
+
+        Toolbar Configuration:
+            - Window title: "Main Toolbar" (displayed when floated)
+            - Object name: "MainToolBar" (required for QSettings persistence)
+            - Movable: False (fixed position for MVP simplicity)
+            - Icon size: 24x24 pixels (standard toolbar icon size)
+            - Button style: Icon only (compact appearance with tooltips)
+            - Position: Top toolbar area (below menu bar)
+
+        Group Structure (separators added in subsequent tasks):
+            1. File Group: File operations (Open)
+            2. Edit Group: Undo/Redo operations
+            3. View Group: Zoom and view controls
+            4. Search Group: Search functionality
+
+        Design Decisions:
+            - Non-movable for MVP prevents accidental rearrangement
+            - 24x24 icon size is standard and works well on high-DPI displays
+            - Icon-only style keeps toolbar compact; tooltips provide labels
+            - Object name enables toolbar state persistence via QSettings
+
+        See Also:
+            - Spec E06-F03-T01 for toolbar infrastructure requirements
+            - Spec E06-F03-T02 for view control tools (adds zoom/fit actions)
+            - Spec E06-F03-T03 for edit/search tools (adds undo/redo/search)
+            - Spec E06-F03-T04 for icon resources
+        """
+        # Create toolbar with descriptive title
+        # Title is shown when toolbar is floated (future feature)
+        toolbar = QToolBar("Main Toolbar", self)
+
+        # Set object name for QSettings state persistence
+        # Without this, saveState()/restoreState() cannot identify the toolbar
+        toolbar.setObjectName("MainToolBar")
+
+        # Make toolbar fixed (non-movable) for MVP
+        # This prevents accidental rearrangement and simplifies the UI
+        # Future enhancement: Allow customization via preferences
+        toolbar.setMovable(False)
+
+        # Set standard 24x24 icon size
+        # This size is:
+        # - Readable on high-DPI displays
+        # - Consistent with common icon libraries
+        # - Standard for professional applications
+        toolbar.setIconSize(QSize(24, 24))
+
+        # Set button style to icon-only for compact appearance
+        # Text labels are available via tooltips on hover
+        toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
+        # Add toolbar to main window in top area (below menu bar)
+        self.addToolBar(toolbar)
+
+        # Store reference for action additions in subsequent tasks
+        # Tasks T02 and T03 will use this to add their actions
+        self._toolbar = toolbar
+
     def _setup_menus(self) -> None:
-        """Set up application menu bar with File and Help menus.
+        """Set up application menu bar with File, Edit, View, and Help menus.
 
-        Creates the main menu structure:
-        - File menu with Open, Open Recent submenu, and Exit actions
-        - Help menu with Settings submenu for settings management
+        Creates the main menu structure with all top-level menus in standard order.
+        Each menu is stored as an instance variable for access by other components.
+        Helper methods delegate menu population to keep code organized.
 
-        Menu Structure:
-            File
+        Menu Structure (E06-F02-T01):
+            File (E06-F02-T02 will populate)
             ├── Open... (Ctrl+O)
             ├── Open Recent ►
-            │   ├── 1. file1.ckt
-            │   ├── 2. file2.ckt
-            │   ├── ───────────
-            │   └── Clear Recent Files
             ├── ─────────────
             └── Exit (Ctrl+Q)
 
-            Help
+            Edit (E06-F02-T03 will populate)
+            └── (stub - populated by T03)
+
+            View (E06-F02-T04 will populate)
+            └── (stub - populated by T04)
+
+            Help (E06-F02-T04 will populate)
             ├── ─────────────
             └── Settings ►
-                ├── Reset Window Layout
-                ├── Clear Recent Files
-                ├── ─────────────
-                ├── Reset All Settings...
-                ├── ─────────────
-                └── Show Settings File Location
+
+        The menus use mnemonics (& prefix) for Alt+key access:
+        - &File → Alt+F
+        - &Edit → Alt+E
+        - &View → Alt+V
+        - &Help → Alt+H
+
+        See Also:
+            - E06-F02-T01: Menu bar setup (this task)
+            - E06-F02-T02: File menu actions
+            - E06-F02-T03: Edit menu actions
+            - E06-F02-T04: View and Help menu actions
         """
+        # Get the menu bar (automatically created by QMainWindow)
         menubar = self.menuBar()
 
         # =================================================================
-        # File Menu
+        # Create all four top-level menus in standard order
+        # Store as instance variables for access by other components
         # =================================================================
-        file_menu = menubar.addMenu("&File")
 
+        # File Menu - first in order, mnemonic Alt+F
+        self.file_menu = menubar.addMenu("&File")
+        self._create_file_menu()
+
+        # Edit Menu - second in order, mnemonic Alt+E
+        self.edit_menu = menubar.addMenu("&Edit")
+        self._create_edit_menu()
+
+        # View Menu - third in order, mnemonic Alt+V
+        self.view_menu = menubar.addMenu("&View")
+        self._create_view_menu()
+
+        # Help Menu - last in order (standard placement), mnemonic Alt+H
+        self.help_menu = menubar.addMenu("&Help")
+        self._create_help_menu()
+
+    def _create_file_menu(self) -> None:
+        """Create File menu items.
+
+        Populates the File menu with:
+        - Open... (Ctrl+O): Opens file dialog for netlist selection
+        - Open Recent: Submenu with recently opened files
+        - Exit (Ctrl+Q): Closes the application
+
+        This method contains the existing File menu implementation.
+        Future tasks may add additional items (Save, Export, etc.)
+
+        See Also:
+            - E06-F02-T02: Will add additional file operations
+            - E06-F06-T03: Recent files management
+        """
         # Open action - opens file dialog for netlist selection
-        open_action = file_menu.addAction("&Open...")
+        open_action = self.file_menu.addAction("&Open...")
         open_action.setShortcut("Ctrl+O")
         open_action.triggered.connect(self._on_open_file_dialog)
 
         # Recent files submenu - dynamically populated from settings
         # Menu is stored as instance attribute for updates
-        self.recent_files_menu = file_menu.addMenu("Open &Recent")
+        self.recent_files_menu = self.file_menu.addMenu("Open &Recent")
 
-        file_menu.addSeparator()
+        self.file_menu.addSeparator()
 
         # Exit action - closes the application
-        exit_action = file_menu.addAction("E&xit")
+        exit_action = self.file_menu.addAction("E&xit")
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
 
-        # =================================================================
-        # Help Menu
-        # =================================================================
-        help_menu = menubar.addMenu("&Help")
+    def _create_edit_menu(self) -> None:
+        """Create Edit menu items.
 
+        Currently a stub - will be populated by E06-F02-T03 with:
+        - Undo/Redo actions
+        - Selection actions
+        - Copy/Paste operations
+
+        See Also:
+            - E06-F02-T03: Edit menu actions implementation
+        """
+        # Stub: Edit menu items will be added by E06-F02-T03
+        pass
+
+    def _create_view_menu(self) -> None:
+        """Create View menu items.
+
+        Currently a stub - will be populated by E06-F02-T04 with:
+        - Zoom controls
+        - Panel visibility toggles
+        - Layout options
+
+        See Also:
+            - E06-F02-T04: View and Help menu actions implementation
+        """
+        # Stub: View menu items will be added by E06-F02-T04
+        pass
+
+    def _create_help_menu(self) -> None:
+        """Create Help menu items.
+
+        Populates the Help menu with:
+        - Settings submenu for application settings management
+
+        Future tasks may add additional help items (About, Documentation, etc.)
+
+        See Also:
+            - E06-F02-T04: Will add additional help items
+            - E06-F06-T04: Settings management functionality
+        """
         # Add separator before settings submenu
-        help_menu.addSeparator()
+        self.help_menu.addSeparator()
 
         # Settings submenu for settings management
         settings_menu = QMenu("&Settings", self)
-        help_menu.addMenu(settings_menu)
+        self.help_menu.addMenu(settings_menu)
 
         # Reset Window Layout action
         reset_geometry_action = settings_menu.addAction("Reset Window Layout")
@@ -431,9 +581,7 @@ class InkMainWindow(QMainWindow):
                 # Using lambda with default argument to capture current file_path
                 # Note: checked parameter is required by Qt signal signature
                 action.triggered.connect(
-                    lambda _checked=False, path=file_path: self._on_open_recent_file(
-                        path
-                    )
+                    lambda _checked=False, path=file_path: self._on_open_recent_file(path)
                 )
 
             self.recent_files_menu.addSeparator()
@@ -603,14 +751,22 @@ class InkMainWindow(QMainWindow):
         (hierarchy_panel, property_panel, message_panel) for direct access
         when implementing panel functionality in future epics.
 
+        After creating dock widgets, a PanelStateManager is initialized to
+        track panel state changes. The manager enables:
+        - Reactive state tracking via Qt signals
+        - Panel visibility control (show/hide/toggle)
+        - State capture for persistence
+
         See Also:
             - E06-F02: View menu toggle actions for panels
             - E06-F05: saveState()/restoreState() for dock persistence
+            - E06-F05-T01: PanelStateManager implementation
         """
         self._setup_hierarchy_dock()
         self._setup_property_dock()
         self._setup_message_dock()
         self._set_initial_dock_sizes()
+        self._setup_panel_state_manager()
 
     def _setup_hierarchy_dock(self) -> None:
         """Create and configure the hierarchy dock widget (left area).
@@ -743,6 +899,36 @@ class InkMainWindow(QMainWindow):
         # 100px allows ~4-5 lines of log messages
         self.message_dock.setMinimumHeight(100)
         self.message_panel.setMinimumSize(300, 100)
+
+    def _setup_panel_state_manager(self) -> None:
+        """Initialize PanelStateManager and register all dock panels.
+
+        Creates a PanelStateManager to track dock widget state changes.
+        The manager monitors visibility, floating, and location changes
+        via Qt signals and maintains synchronized panel state.
+
+        Panel Registration:
+            - "Hierarchy": hierarchy_dock (left area)
+            - "Properties": property_dock (right area)
+            - "Messages": message_dock (bottom area)
+
+        The manager enables:
+            - Reactive state tracking via custom signals
+            - Panel visibility control (show/hide/toggle)
+            - State capture for persistence
+
+        See Also:
+            - E06-F05-T01: PanelStateManager specification
+            - PanelStateManager for API documentation
+        """
+        # Create the panel state manager with reference to this window
+        self.panel_state_manager = PanelStateManager(self)
+
+        # Register all dock widgets for state tracking
+        # Names match the dock widget titles for consistency
+        self.panel_state_manager.register_panel("Hierarchy", self.hierarchy_dock)
+        self.panel_state_manager.register_panel("Properties", self.property_dock)
+        self.panel_state_manager.register_panel("Messages", self.message_dock)
 
     # =========================================================================
     # Status Bar Setup (E06-F04-T01)
@@ -969,8 +1155,7 @@ class InkMainWindow(QMainWindow):
             QMessageBox.information(
                 self,
                 "Window Layout Reset",
-                "Window layout has been reset.\n\n"
-                "Restart the application to apply the new layout.",
+                "Window layout has been reset.\n\nRestart the application to apply the new layout.",
             )
 
     def _on_clear_recent_files(self) -> None:
