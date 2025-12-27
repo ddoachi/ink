@@ -240,11 +240,7 @@ class TestStatusBarSeparators:
         status_bar = main_window.statusBar()
 
         # Find all QLabel children that contain the separator character
-        separators = [
-            child
-            for child in status_bar.findChildren(QLabel)
-            if "│" in child.text()
-        ]
+        separators = [child for child in status_bar.findChildren(QLabel) if "│" in child.text()]
 
         # Should have exactly 3 separators between 4 widgets
         assert len(separators) == 3
@@ -258,11 +254,7 @@ class TestStatusBarSeparators:
         status_bar = main_window.statusBar()
 
         # Find separator widgets
-        separators = [
-            child
-            for child in status_bar.findChildren(QLabel)
-            if "│" in child.text()
-        ]
+        separators = [child for child in status_bar.findChildren(QLabel) if "│" in child.text()]
 
         # At least one separator should have gray in its stylesheet
         assert len(separators) > 0
@@ -277,9 +269,7 @@ class TestStatusBarSeparators:
 class TestStatusBarLayout:
     """Tests for status bar layout behavior."""
 
-    def test_status_bar_has_appropriate_height(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_status_bar_has_appropriate_height(self, main_window: InkMainWindow) -> None:
         """Test status bar has reasonable minimum height for readability.
 
         Status bar should not collapse to tiny size. A typical status bar
@@ -290,6 +280,7 @@ class TestStatusBarLayout:
 
         # Process events to ensure layout is calculated
         from PySide6.QtWidgets import QApplication
+
         QApplication.processEvents()
 
         # Status bar should have reasonable height (at least for readable text)

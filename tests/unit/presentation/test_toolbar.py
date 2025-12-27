@@ -131,9 +131,7 @@ class TestToolbarCreated:
         assert toolbar is not None
         assert toolbar.windowTitle() == "Main Toolbar"
 
-    def test_toolbar_has_object_name_for_persistence(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_toolbar_has_object_name_for_persistence(self, main_window: InkMainWindow) -> None:
         """Test toolbar has object name "MainToolBar" for QSettings persistence.
 
         Object name is required for Qt's saveState()/restoreState() to work
@@ -232,9 +230,7 @@ class TestToolbarPosition:
 class TestToolbarReference:
     """Tests for toolbar instance variable storage."""
 
-    def test_toolbar_stored_as_instance_variable(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_toolbar_stored_as_instance_variable(self, main_window: InkMainWindow) -> None:
         """Test toolbar reference is stored in _toolbar instance variable.
 
         The toolbar reference is needed for:
@@ -247,13 +243,9 @@ class TestToolbarReference:
         """
         assert hasattr(main_window, "_toolbar"), "Window should have _toolbar attribute"
         assert main_window._toolbar is not None, "_toolbar should not be None"
-        assert isinstance(
-            main_window._toolbar, QToolBar
-        ), "_toolbar should be a QToolBar instance"
+        assert isinstance(main_window._toolbar, QToolBar), "_toolbar should be a QToolBar instance"
 
-    def test_toolbar_reference_matches_findchild(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_toolbar_reference_matches_findchild(self, main_window: InkMainWindow) -> None:
         """Test _toolbar reference is the same object as findChild result.
 
         Ensures consistency between the instance variable and Qt's object tree.

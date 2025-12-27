@@ -161,29 +161,53 @@ class TestMessagePanel:
         assert isinstance(layout, QVBoxLayout)
 
     def test_message_panel_has_placeholder_label(self, qapp: QApplication) -> None:
-        """Test message panel displays placeholder text."""
+        """Test message panel displays placeholder text.
+
+        Note: Layout structure is [QLineEdit (search), QLabel (placeholder)]
+        since E06-F02-T03 added search input.
+        """
         panel = MessagePanel()
         layout = panel.layout()
         assert layout is not None
-        assert layout.count() >= 1
-        layout_item = layout.itemAt(0)
-        assert layout_item is not None
-        label_widget = layout_item.widget()
+        # Layout has 2 items: search input (index 0) + placeholder label (index 1)
+        assert layout.count() >= 2
+        label_item = layout.itemAt(1)  # Placeholder label is at index 1
+        assert label_item is not None
+        label_widget = label_item.widget()
         assert isinstance(label_widget, QLabel)
         assert "Message" in label_widget.text()
         assert "E04-F03" in label_widget.text()
 
     def test_message_panel_label_centered(self, qapp: QApplication) -> None:
-        """Test placeholder label is center-aligned."""
+        """Test placeholder label is center-aligned.
+
+        Note: Layout structure is [QLineEdit (search), QLabel (placeholder)]
+        since E06-F02-T03 added search input.
+        """
         panel = MessagePanel()
         layout = panel.layout()
         assert layout is not None
-        layout_item = layout.itemAt(0)
-        assert layout_item is not None
-        label_widget = layout_item.widget()
+        label_item = layout.itemAt(1)  # Placeholder label is at index 1
+        assert label_item is not None
+        label_widget = label_item.widget()
         assert isinstance(label_widget, QLabel)
         alignment = label_widget.alignment()
         assert alignment & Qt.AlignmentFlag.AlignCenter
+
+    def test_message_panel_has_search_input(self, qapp: QApplication) -> None:
+        """Test message panel has search input for Find action (E06-F02-T03)."""
+        from PySide6.QtWidgets import QLineEdit
+
+        panel = MessagePanel()
+        # The search_input should be accessible as an attribute
+        assert hasattr(panel, "search_input")
+        assert isinstance(panel.search_input, QLineEdit)
+
+    def test_message_panel_focus_search_input_method(self, qapp: QApplication) -> None:
+        """Test message panel has focus_search_input method (E06-F02-T03)."""
+        panel = MessagePanel()
+        assert hasattr(panel, "focus_search_input")
+        assert callable(panel.focus_search_input)
 
 
 class TestPanelPackageExports:
