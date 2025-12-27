@@ -40,7 +40,7 @@ See Also:
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ink.domain.value_objects.pin_direction import PinDirection
@@ -71,29 +71,50 @@ class PinDirectionParseError(Exception):
 
 @dataclass
 class PinDirectionMap:
-    """Mapping of pin names to their directions.
+    """Mapping of pin names to their directions with default handling.
 
     This data structure holds the parsed content of a .pindir file,
-    providing efficient lookup of pin directions by name.
+    providing efficient lookup of pin directions by name. It also tracks
+    which pins were queried but not found in the mapping, enabling
+    statistics and reporting on missing pin direction data.
 
     The map supports:
     - O(1) lookup by pin name
     - Default value (INOUT) for unknown pins
     - Case-sensitive pin name matching
+    - Tracking of missing pin accesses for statistics
+
+    Design Decisions:
+        - INOUT is used as the default direction because it's the most
+          conservative assumption (allows bidirectional traversal)
+        - Missing pins are tracked using a Set for O(1) insertion and
+          automatic deduplication
+        - The tracking field uses field(default_factory=set) to ensure
+          each instance gets its own independent set
 
     Attributes:
         directions: Dictionary mapping pin names to PinDirection values
+        _accessed_missing_pins: Set of pin names that were queried but
+            not found in the directions mapping. This is internal state
+            used for statistics; access via get_missing_pins() method.
 
     Example:
         >>> from ink.domain.value_objects.pin_direction import PinDirection
         >>> pin_map = PinDirectionMap(directions={"A": PinDirection.INPUT})
         >>> pin_map.get_direction("A")
         <PinDirection.INPUT: 'INPUT'>
-        >>> pin_map.get_direction("UNKNOWN")
+        >>> pin_map.get_direction("UNKNOWN")  # Tracks as missing
         <PinDirection.INOUT: 'INOUT'>
+        >>> pin_map.get_missing_pins()
+        {'UNKNOWN'}
     """
 
     directions: dict[str, PinDirection]
+
+    # Internal tracking of pins that were queried but not found.
+    # Uses field with default_factory to ensure each instance has its own set.
+    # init=False means this field is not included in the generated __init__.
+    _accessed_missing_pins: set[str] = field(default_factory=set, init=False)
 
     def get_direction(self, pin_name: str) -> PinDirection:
         """Get direction for a pin name, with default for unknown pins.
@@ -102,13 +123,27 @@ class PinDirectionMap:
         If the pin is not found in the mapping, INOUT is returned as
         the safest assumption (allows both input and output traversal).
 
+        Missing pins are tracked internally for statistics and reporting.
+        Use get_missing_pins() to retrieve the set of all pins that were
+        queried but not found.
+
         Args:
             pin_name: The name of the pin to look up (case-sensitive)
 
         Returns:
             The direction of the pin if found, otherwise PinDirection.INOUT
+
+        Note:
+            This method has a side effect: it tracks missing pins.
+            Use has_pin() if you want to check existence without tracking.
         """
-        return self.directions.get(pin_name, PinDirection.INOUT)
+        if pin_name not in self.directions:
+            # Track this missing pin for statistics reporting.
+            # Set.add() is O(1) and automatically handles deduplication.
+            self._accessed_missing_pins.add(pin_name)
+            return PinDirection.INOUT
+
+        return self.directions[pin_name]
 
     def has_pin(self, pin_name: str) -> bool:
         """Check if a pin name exists in the mapping.
@@ -117,6 +152,9 @@ class PinDirectionMap:
         - Pin explicitly defined as INOUT
         - Pin not defined (defaulting to INOUT)
 
+        Unlike get_direction(), this method does NOT track missing pins.
+        This allows checking for pin existence without side effects.
+
         Args:
             pin_name: The name of the pin to check (case-sensitive)
 
@@ -124,6 +162,54 @@ class PinDirectionMap:
             True if the pin is defined in the mapping, False otherwise
         """
         return pin_name in self.directions
+
+    def get_missing_pin_stats(self) -> dict[str, int]:
+        """Get statistics on missing pin direction queries.
+
+        Provides insight into pin direction coverage and helps identify
+        incomplete .pindir files. Use this after loading a design to
+        understand how many pins are using default INOUT directions.
+
+        Returns:
+            Dictionary with the following statistics:
+            - 'defined_pins': Number of pins with explicit direction definitions
+            - 'missing_pins_accessed': Number of unique pins queried but not found
+            - 'total_unique_pins': Total unique pins (defined + missing accessed)
+
+        Example:
+            >>> stats = pin_map.get_missing_pin_stats()
+            >>> coverage = stats['defined_pins'] / stats['total_unique_pins'] * 100
+            >>> print(f"Pin direction coverage: {coverage:.1f}%")
+        """
+        defined_count = len(self.directions)
+        missing_count = len(self._accessed_missing_pins)
+
+        return {
+            "defined_pins": defined_count,
+            "missing_pins_accessed": missing_count,
+            "total_unique_pins": defined_count + missing_count,
+        }
+
+    def get_missing_pins(self) -> set[str]:
+        """Get set of all pin names that were queried but not defined.
+
+        Returns a copy of the internal tracking set to prevent external
+        modification of internal state. This ensures immutability of
+        the tracking data.
+
+        Use this method to:
+        - Export missing pins for manual direction assignment
+        - Display warnings to users about incomplete pin direction data
+        - Generate reports on pin direction coverage
+
+        Returns:
+            Set of pin names that were looked up via get_direction()
+            but were not found in the directions mapping.
+            Returns an empty set if no missing pins have been accessed.
+        """
+        # Return a copy to prevent external mutation of internal state.
+        # This preserves the encapsulation of the tracking mechanism.
+        return self._accessed_missing_pins.copy()
 
 
 class PinDirectionParser:
