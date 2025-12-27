@@ -33,7 +33,15 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QCloseEvent, QGuiApplication
-from PySide6.QtWidgets import QDockWidget, QFileDialog, QMainWindow, QMenu, QMessageBox
+from PySide6.QtWidgets import (
+    QDockWidget,
+    QFileDialog,
+    QLabel,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QStatusBar,
+)
 
 from ink.presentation.canvas import SchematicCanvas
 from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
@@ -108,6 +116,12 @@ class InkMainWindow(QMainWindow):
     message_panel: MessagePanel
     message_dock: QDockWidget
 
+    # Status bar widget type hints (E06-F04-T01)
+    file_label: QLabel
+    zoom_label: QLabel
+    selection_label: QLabel
+    object_count_label: QLabel
+
     # Window configuration constants
     # These are class-level to make requirements explicit and testable
     _WINDOW_TITLE: str = "Ink - Incremental Schematic Viewer"
@@ -159,6 +173,7 @@ class InkMainWindow(QMainWindow):
         self._setup_window()
         self._setup_central_widget()
         self._setup_dock_widgets()
+        self._setup_status_bar()
         self._setup_menus()
 
         # Restore geometry AFTER all widgets are created
@@ -728,6 +743,104 @@ class InkMainWindow(QMainWindow):
         # 100px allows ~4-5 lines of log messages
         self.message_dock.setMinimumHeight(100)
         self.message_panel.setMinimumSize(300, 100)
+
+    # =========================================================================
+    # Status Bar Setup (E06-F04-T01)
+    # =========================================================================
+    # Status bar provides persistent display of contextual information:
+    # - File name: Currently loaded netlist file
+    # - Zoom level: Current zoom percentage
+    # - Selection count: Number of selected objects
+    # - Object counts: Visible cells and nets
+
+    def _setup_status_bar(self) -> None:
+        """Create and configure the status bar with persistent widgets.
+
+        Sets up a QStatusBar with four permanent widgets for displaying:
+        1. File name - current netlist file or "No file loaded"
+        2. Zoom level - current zoom percentage (default 100%)
+        3. Selection count - number of selected objects
+        4. Object counts - visible cells and nets
+
+        All widgets are added as permanent widgets so they remain visible
+        even when temporary status messages are shown. Visual separators
+        using the Unicode pipe character (│) provide clear section boundaries.
+
+        Layout Structure:
+            [File: design.ckt] │ [Zoom: 100%] │ [Selected: 3] │ [Cells: 45 / Nets: 67]
+
+        Design Decisions:
+            - Permanent widgets: Won't be displaced by temporary messages
+            - Fixed minimum widths: Prevent layout jumping when content changes
+            - Gray separators: Subtle visual division without distracting
+            - Placeholder text: Meaningful initial state (no file, 100% zoom, etc.)
+
+        See Also:
+            - E06-F04-T02: Selection status display (updates selection_label)
+            - E06-F04-T03: Zoom level display (updates zoom_label)
+            - E06-F04-T04: File and object count display (updates file_label, object_count_label)
+        """
+        # Create status bar and attach to main window
+        # QMainWindow.setStatusBar() replaces any existing status bar
+        status_bar = QStatusBar()
+        self.setStatusBar(status_bar)
+
+        # File name label (leftmost widget)
+        # Displays current file name or "No file loaded" placeholder
+        # 200px min width accommodates typical filenames like "circuit_design_v2.ckt"
+        self.file_label = QLabel("No file loaded")
+        self.file_label.setMinimumWidth(200)
+        status_bar.addPermanentWidget(self.file_label)
+
+        # Separator between file and zoom
+        status_bar.addPermanentWidget(self._create_separator())
+
+        # Zoom level label
+        # Displays current zoom percentage from 10% to 1000%
+        # 100px min width accommodates "Zoom: 1000%" (max zoom)
+        self.zoom_label = QLabel("Zoom: 100%")
+        self.zoom_label.setMinimumWidth(100)
+        status_bar.addPermanentWidget(self.zoom_label)
+
+        # Separator between zoom and selection
+        status_bar.addPermanentWidget(self._create_separator())
+
+        # Selection count label
+        # Displays number of currently selected objects
+        # 100px min width accommodates "Selected: 9999" (large selections)
+        self.selection_label = QLabel("Selected: 0")
+        self.selection_label.setMinimumWidth(100)
+        status_bar.addPermanentWidget(self.selection_label)
+
+        # Separator between selection and object count
+        status_bar.addPermanentWidget(self._create_separator())
+
+        # Object count label (rightmost widget)
+        # Displays visible cell and net counts
+        # 150px min width accommodates "Cells: 9999 / Nets: 9999"
+        self.object_count_label = QLabel("Cells: 0 / Nets: 0")
+        self.object_count_label.setMinimumWidth(150)
+        status_bar.addPermanentWidget(self.object_count_label)
+
+    def _create_separator(self) -> QLabel:
+        """Create a visual separator for the status bar.
+
+        Returns a QLabel configured as a vertical separator using the
+        Unicode box-drawing character (│, U+2502). The separator is
+        styled with gray color for subtle visual distinction.
+
+        Returns:
+            QLabel configured as a separator widget.
+
+        Design Decisions:
+            - Unicode pipe (│): Clean vertical line, cross-platform compatible
+            - Gray color: Subtle appearance, doesn't compete with content
+            - Spaces around pipe: Provide padding between sections
+            - QLabel (not QFrame): Simpler, consistent rendering, lighter weight
+        """
+        separator = QLabel(" │ ")
+        separator.setStyleSheet("color: gray;")
+        return separator
 
     # =========================================================================
     # Window Geometry Persistence (E06-F06-T02)
