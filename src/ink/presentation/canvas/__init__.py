@@ -10,6 +10,7 @@ Current implementation (E06-F01-T02):
 E02 - Rendering Epic Components:
     - CellItem (E02-F01-T01): QGraphicsItem for cell symbol rendering
     - SymbolLayoutCalculator (E02-F01-T03): Pin position calculation
+    - DetailLevel (E02-F01-T05): Level of Detail enum for rendering optimization
 
 Future implementation (E02 - Rendering):
     - Full QGraphicsView-based rendering with QGraphicsScene
@@ -18,16 +19,23 @@ Future implementation (E02 - Rendering):
     - Selection and highlighting
 
 Example:
-    >>> from ink.presentation.canvas import SchematicCanvas, CellItem
+    >>> from ink.presentation.canvas import SchematicCanvas, CellItem, DetailLevel
     >>> canvas = SchematicCanvas()
     >>> canvas.show()
 """
 
 from ink.presentation.canvas.cell_item import CellItem
+from ink.presentation.canvas.detail_level import DetailLevel
 from ink.presentation.canvas.schematic_canvas import SchematicCanvas
 from ink.presentation.canvas.symbol_layout_calculator import (
     PinLayout,
     SymbolLayoutCalculator,
 )
 
-__all__ = ["CellItem", "PinLayout", "SchematicCanvas", "SymbolLayoutCalculator"]
+__all__ = [
+    "CellItem",
+    "DetailLevel",
+    "PinLayout",
+    "SchematicCanvas",
+    "SymbolLayoutCalculator",
+]

@@ -14,18 +14,25 @@ Visual Specifications:
     - Cell body: Rounded rectangle (5px corner radius)
     - Default size: 120x80 pixels
     - Combinational cells: 2px border, light gray fill (#F0F0F0)
-    - Sequential cells: 3px border, white fill (#FFFFFF)
+    - Sequential cells: 3px border, white fill (#FFFFFF), clock icon at FULL detail
     - Cell name: Centered, sans-serif 10pt, black text
     - Selection: Blue border (#2196F3), subtle highlight
     - Hover: Slightly darker border
+
+Level of Detail (LOD) Rendering (E02-F01-T05):
+    - MINIMAL: Simple rectangle, no text or icons
+    - BASIC: Rectangle with cell name, sequential distinction (border/fill)
+    - FULL: All details including clock indicator for sequential cells
 
 Performance Considerations:
     - Uses Qt's caching mechanism (CacheMode.DeviceCoordinateCache)
     - Efficient bounding rect calculation (accounts for border width)
     - Shape method provides accurate selection hit detection
+    - Clock indicator only rendered at FULL detail for performance
 
 See Also:
     - Spec E02-F01-T01 for detailed requirements
+    - Spec E02-F01-T05 for sequential cell styling and clock indicator
     - src/ink/domain/model/cell.py for Cell domain entity
     - Qt documentation for QGraphicsItem
 
@@ -33,12 +40,14 @@ Example:
     >>> from ink.domain.model.cell import Cell
     >>> from ink.domain.value_objects.identifiers import CellId
     >>> from ink.presentation.canvas.cell_item import CellItem
+    >>> from ink.presentation.canvas.detail_level import DetailLevel
     >>>
     >>> # Create domain cell
     >>> cell = Cell(id=CellId("U1"), name="U1", cell_type="AND2_X1")
     >>>
-    >>> # Create graphics item
+    >>> # Create graphics item with detail level
     >>> cell_item = CellItem(cell)
+    >>> cell_item.set_detail_level(DetailLevel.FULL)
     >>> cell_item.set_position(100.0, 200.0)
     >>>
     >>> # Add to scene
@@ -64,6 +73,8 @@ from PySide6.QtWidgets import (
     QStyleOptionGraphicsItem,
     QWidget,
 )
+
+from ink.presentation.canvas.detail_level import DetailLevel
 
 if TYPE_CHECKING:
     from ink.domain.model.cell import Cell
@@ -126,6 +137,21 @@ class CellItem(QGraphicsItem):
     """Border width for sequential cells. Thicker for visual distinction."""
 
     # ==========================================================================
+    # Class Constants - Clock Indicator (E02-F01-T05)
+    # ==========================================================================
+    # These values define the clock indicator dimensions for sequential cells.
+    # The clock icon is only shown at FULL detail level.
+
+    CLOCK_ICON_SIZE: float = 12.0
+    """Clock icon size in pixels. Small but visible at FULL detail."""
+
+    CLOCK_ICON_MARGIN: float = 5.0
+    """Margin from cell edge to clock icon. Provides visual spacing."""
+
+    _CLOCK_ICON_COLOR = QColor("#666666")
+    """Dark gray color for clock icon. Subtle but visible."""
+
+    # ==========================================================================
     # Class Constants - Colors
     # ==========================================================================
     # Color palette follows material design principles for clarity.
@@ -172,6 +198,11 @@ class CellItem(QGraphicsItem):
         # Track hover state for visual feedback
         # Qt doesn't provide direct hover state query, so we track it
         self._is_hovered = False
+
+        # Level of Detail (LOD) for rendering optimization (E02-F01-T05)
+        # Default to BASIC - standard rendering with cell name
+        # FULL enables clock indicator for sequential cells
+        self._detail_level = DetailLevel.BASIC
 
         # Configure Qt item flags
         self._setup_flags()
@@ -314,9 +345,18 @@ class CellItem(QGraphicsItem):
             painter.drawRoundedRect(body_rect, self.CORNER_RADIUS, self.CORNER_RADIUS)
 
         # =======================================================================
-        # Draw Cell Name Label
+        # Draw Cell Name Label (BASIC and FULL detail levels)
         # =======================================================================
-        self._draw_cell_name(painter, body_rect)
+        if self._detail_level >= DetailLevel.BASIC:
+            self._draw_cell_name(painter, body_rect)
+
+        # =======================================================================
+        # Draw Clock Indicator (FULL detail only, sequential cells only)
+        # =======================================================================
+        # Clock indicator is a visual cue for sequential elements (flip-flops,
+        # latches). Only shown at FULL detail to avoid clutter when zoomed out.
+        if self._detail_level == DetailLevel.FULL and is_sequential:
+            self._draw_clock_indicator(painter)
 
     def _draw_cell_name(self, painter: QPainter, rect: QRectF) -> None:
         """Draw the cell instance name centered within the cell body.
@@ -364,6 +404,79 @@ class CellItem(QGraphicsItem):
             Qt.AlignmentFlag.AlignCenter,
             cell_name,
         )
+
+    def _draw_clock_indicator(self, painter: QPainter) -> None:
+        """Draw clock indicator icon for sequential cells.
+
+        Renders a simple clock icon (circle with clock hands) in the top-right
+        corner of the cell symbol. This provides a visual cue that the cell is
+        a sequential element (flip-flop, latch).
+
+        The clock icon consists of:
+        - A circular clock face (outline only)
+        - Hour hand pointing up (12 o'clock position)
+        - Minute hand pointing right (3 o'clock position)
+
+        This method is only called when:
+        - Cell is sequential (is_sequential=True)
+        - Detail level is FULL
+
+        Args:
+            painter: QPainter to draw with
+
+        Note:
+            The clock icon is positioned in the top-right corner with a margin
+            from the cell edges. The icon uses simple QPainter primitives for
+            fast rendering without external assets.
+
+        Example:
+            Clock icon visual representation:
+            ```
+               ╭──╮
+               │ ↑│  <- hour hand at 12
+               │ →│  <- minute hand at 3
+               ╰──╯
+            ```
+        """
+        # Save painter state to restore after drawing
+        painter.save()
+
+        # Calculate icon position (top-right corner with margin)
+        # icon_x: Start from right edge, subtract icon size and margin
+        # icon_y: Start from top edge, add margin
+        icon_x = self.DEFAULT_WIDTH - self.CLOCK_ICON_SIZE - self.CLOCK_ICON_MARGIN
+        icon_y = self.CLOCK_ICON_MARGIN
+
+        # Calculate clock center point
+        center = QPointF(
+            icon_x + self.CLOCK_ICON_SIZE / 2,
+            icon_y + self.CLOCK_ICON_SIZE / 2,
+        )
+
+        # Calculate radius (slightly smaller than half icon size for pen width)
+        radius = (self.CLOCK_ICON_SIZE / 2) - 1.0
+
+        # Configure pen for clock drawing (thin line, dark gray)
+        clock_pen = QPen(self._CLOCK_ICON_COLOR, 1.0)
+        clock_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(clock_pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+
+        # Draw clock face (circle)
+        painter.drawEllipse(center, radius, radius)
+
+        # Draw hour hand (pointing up, shorter)
+        # Hour hand length is 50% of radius
+        hour_end = center + QPointF(0, -radius * 0.5)
+        painter.drawLine(center, hour_end)
+
+        # Draw minute hand (pointing right, longer)
+        # Minute hand length is 70% of radius
+        minute_end = center + QPointF(radius * 0.7, 0)
+        painter.drawLine(center, minute_end)
+
+        # Restore painter state
+        painter.restore()
 
     def shape(self) -> QPainterPath:
         """Return the shape path for accurate selection detection.
@@ -480,6 +593,57 @@ class CellItem(QGraphicsItem):
             >>> print(f"Cell type: {cell.cell_type}")
         """
         return self._cell
+
+    # ==========================================================================
+    # Detail Level Management (E02-F01-T05)
+    # ==========================================================================
+
+    def get_detail_level(self) -> DetailLevel:
+        """Return the current detail level for rendering.
+
+        The detail level controls how much visual information is shown:
+        - MINIMAL: Simple rectangle, no text
+        - BASIC: Cell name displayed
+        - FULL: All details including clock indicator for sequential cells
+
+        Returns:
+            Current DetailLevel value
+
+        Example:
+            >>> if cell_item.get_detail_level() == DetailLevel.FULL:
+            ...     print("Showing full detail with clock indicator")
+        """
+        return self._detail_level
+
+    def set_detail_level(self, level: DetailLevel) -> None:
+        """Set the detail level for rendering.
+
+        Changes the Level of Detail (LOD) for this cell item. This affects
+        what visual elements are rendered:
+        - MINIMAL: Only the cell body rectangle
+        - BASIC: Cell body + cell name
+        - FULL: Cell body + cell name + clock indicator (if sequential)
+
+        Typically called by the canvas when zoom level changes to optimize
+        rendering performance.
+
+        Args:
+            level: New DetailLevel value
+
+        Note:
+            Changing detail level triggers a repaint to update the visual.
+
+        Example:
+            >>> # Switch to full detail for zoomed-in view
+            >>> cell_item.set_detail_level(DetailLevel.FULL)
+            >>>
+            >>> # Switch to minimal detail for zoomed-out view
+            >>> cell_item.set_detail_level(DetailLevel.MINIMAL)
+        """
+        if self._detail_level != level:
+            self._detail_level = level
+            # Invalidate cache and trigger repaint
+            self.update()
 
     def __repr__(self) -> str:
         """Return string representation for debugging.

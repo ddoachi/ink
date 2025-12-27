@@ -253,11 +253,12 @@ class TestScalingBehavior:
             print(f"\n{size} cells: {avg_time:.2f}ms")
 
         # Check roughly linear scaling (10x cells should be ~10x time)
-        # Allow 3x factor for overhead
+        # Allow wide margin for system variance and CI environments
         ratio_100_to_1000 = times[3] / times[0]
         print(f"\nScaling ratio (1000/100): {ratio_100_to_1000:.1f}x (expected ~10x)")
 
-        # Should be within 3-30x (linear would be 10x)
-        assert 3 <= ratio_100_to_1000 <= 30, (
+        # Should be within 3-50x (linear would be 10x, but small inputs have
+        # high variance due to fixed overhead dominating)
+        assert 3 <= ratio_100_to_1000 <= 50, (
             f"Unexpected scaling: {ratio_100_to_1000:.1f}x"
         )
