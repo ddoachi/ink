@@ -271,9 +271,7 @@ class AppSettings:
         version = self.get_value(self.KEY_SETTINGS_VERSION, 0, value_type=int)
         return int(version) if version is not None else 0
 
-    def get_value(
-        self, key: str, default: Any = None, value_type: type | None = None
-    ) -> Any:
+    def get_value(self, key: str, default: Any = None, value_type: type | None = None) -> Any:
         """Get a setting value with optional type conversion.
 
         Retrieves the value associated with the given key. If the key

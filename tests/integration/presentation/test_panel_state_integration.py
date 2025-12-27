@@ -61,9 +61,7 @@ def isolated_settings(tmp_path: Path) -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def main_window(
-    qapp: QApplication, isolated_settings: Path
-) -> Generator[QMainWindow, None, None]:
+def main_window(qapp: QApplication, isolated_settings: Path) -> Generator[QMainWindow, None, None]:
     """Create a real QMainWindow for integration tests."""
     window = QMainWindow()
     window.setMinimumSize(800, 600)
@@ -123,9 +121,7 @@ class TestPanelRegistrationIntegration:
         assert "Properties" in manager_with_panels.state.panels
         assert "Messages" in manager_with_panels.state.panels
 
-    def test_panel_areas_captured_correctly(
-        self, manager_with_panels: PanelStateManager
-    ) -> None:
+    def test_panel_areas_captured_correctly(self, manager_with_panels: PanelStateManager) -> None:
         """Test dock areas are captured correctly for each panel."""
         assert manager_with_panels.state.panels["Hierarchy"].area == DockArea.LEFT
         assert manager_with_panels.state.panels["Properties"].area == DockArea.RIGHT
@@ -145,9 +141,7 @@ class TestStateCaptureIntegration:
         assert state.qt_state is not None
         assert state.qt_geometry is not None
 
-    def test_capture_state_includes_qt_blobs(
-        self, manager_with_panels: PanelStateManager
-    ) -> None:
+    def test_capture_state_includes_qt_blobs(self, manager_with_panels: PanelStateManager) -> None:
         """Test Qt state blobs are not empty."""
         state = manager_with_panels.capture_state()
 
@@ -155,9 +149,7 @@ class TestStateCaptureIntegration:
         assert len(state.qt_state) > 0
         assert len(state.qt_geometry) > 0
 
-    def test_capture_state_updates_geometries(
-        self, manager_with_panels: PanelStateManager
-    ) -> None:
+    def test_capture_state_updates_geometries(self, manager_with_panels: PanelStateManager) -> None:
         """Test capture_state updates panel geometries."""
         state = manager_with_panels.capture_state()
 
@@ -171,9 +163,7 @@ class TestStateCaptureIntegration:
 class TestStateRestoreIntegration:
     """Integration tests for state restoration."""
 
-    def test_restore_state_roundtrip(
-        self, manager_with_panels: PanelStateManager
-    ) -> None:
+    def test_restore_state_roundtrip(self, manager_with_panels: PanelStateManager) -> None:
         """Test state capture and restore round-trip."""
         # Capture initial state
         initial_state = manager_with_panels.capture_state()
@@ -214,9 +204,7 @@ class TestStateRestoreIntegration:
 class TestPanelControlIntegration:
     """Integration tests for panel control API."""
 
-    def test_show_panel_makes_panel_visible(
-        self, manager_with_panels: PanelStateManager
-    ) -> None:
+    def test_show_panel_makes_panel_visible(self, manager_with_panels: PanelStateManager) -> None:
         """Test show_panel makes hidden panel visible."""
         # Hide panel first
         manager_with_panels._dock_widgets["Hierarchy"].hide()
@@ -228,9 +216,7 @@ class TestPanelControlIntegration:
         # Should no longer be hidden
         assert not manager_with_panels._dock_widgets["Hierarchy"].isHidden()
 
-    def test_hide_panel_hides_visible_panel(
-        self, manager_with_panels: PanelStateManager
-    ) -> None:
+    def test_hide_panel_hides_visible_panel(self, manager_with_panels: PanelStateManager) -> None:
         """Test hide_panel hides a visible panel."""
         # Ensure panel is not hidden
         assert not manager_with_panels._dock_widgets["Properties"].isHidden()
@@ -263,9 +249,7 @@ class TestPanelControlIntegration:
         dock.show()
         assert not dock.isHidden()
 
-    def test_toggle_panel_shows_hidden(
-        self, manager_with_panels: PanelStateManager
-    ) -> None:
+    def test_toggle_panel_shows_hidden(self, manager_with_panels: PanelStateManager) -> None:
         """Test toggle_panel shows hidden panel."""
         # Hide first
         manager_with_panels._dock_widgets["Hierarchy"].hide()
@@ -299,9 +283,7 @@ class TestPanelControlIntegration:
 class TestGetStateConvenience:
     """Tests for get_state convenience method."""
 
-    def test_get_state_returns_capture(
-        self, manager_with_panels: PanelStateManager
-    ) -> None:
+    def test_get_state_returns_capture(self, manager_with_panels: PanelStateManager) -> None:
         """Test get_state returns same result as capture_state."""
         state = manager_with_panels.get_state()
 
@@ -364,9 +346,7 @@ class TestSignalEmissionIntegration:
         # Verify via isHidden() which reflects the explicit hidden flag
         assert not dock.isHidden()
 
-    def test_state_changed_signal_emitted(
-        self, manager_with_panels: PanelStateManager
-    ) -> None:
+    def test_state_changed_signal_emitted(self, manager_with_panels: PanelStateManager) -> None:
         """Test state_changed signal emitted on dock changes."""
         signal_count = [0]
 

@@ -179,9 +179,7 @@ class PanelStateManager(QObject):
         dock_widget.topLevelChanged.connect(
             lambda floating: self._on_floating_changed(name, floating)
         )
-        dock_widget.dockLocationChanged.connect(
-            lambda area: self._on_location_changed(name, area)
-        )
+        dock_widget.dockLocationChanged.connect(lambda area: self._on_location_changed(name, area))
 
     def _on_visibility_changed(self, name: str, visible: bool) -> None:
         """Handle panel visibility change.

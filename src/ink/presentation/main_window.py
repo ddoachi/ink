@@ -419,9 +419,7 @@ class InkMainWindow(QMainWindow):
                 # Using lambda with default argument to capture current file_path
                 # Note: checked parameter is required by Qt signal signature
                 action.triggered.connect(
-                    lambda _checked=False, path=file_path: self._on_open_recent_file(
-                        path
-                    )
+                    lambda _checked=False, path=file_path: self._on_open_recent_file(path)
                 )
 
             self.recent_files_menu.addSeparator()
@@ -897,8 +895,7 @@ class InkMainWindow(QMainWindow):
             QMessageBox.information(
                 self,
                 "Window Layout Reset",
-                "Window layout has been reset.\n\n"
-                "Restart the application to apply the new layout.",
+                "Window layout has been reset.\n\nRestart the application to apply the new layout.",
             )
 
     def _on_clear_recent_files(self) -> None:
