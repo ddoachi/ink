@@ -1692,6 +1692,108 @@ class InkMainWindow(QMainWindow):
         """
         self.selection_label.setText(f"Selected: {count}")
 
+    def update_file_status(self, file_path: str | None) -> None:
+        """Update file name in status bar.
+
+        Updates the file_label text to show the current file's base name.
+        The full path is stored in the tooltip for user reference on hover.
+        When no file is loaded (file_path is None), shows placeholder text.
+
+        This method is called:
+            - When a file is loaded via File > Open or recent files
+            - When the file is closed (with None)
+            - At application startup (initial state shows placeholder)
+
+        Args:
+            file_path: Absolute path to loaded file, or None if no file loaded.
+
+        Example:
+            >>> window.update_file_status("/home/user/project/design.ckt")
+            # Shows "File: design.ckt" with full path in tooltip
+            >>> window.update_file_status(None)
+            # Shows "No file loaded" with empty tooltip
+
+        See Also:
+            - Spec E06-F04-T04 for file status display requirements
+            - E01-F02: File service (emits file_loaded/file_closed signals)
+        """
+        if file_path:
+            # Extract base name using pathlib for cross-platform compatibility
+            # Path handles unicode filenames correctly
+            file_name = Path(file_path).name
+            self.file_label.setText(f"File: {file_name}")
+            # Store full path in tooltip for reference on hover
+            self.file_label.setToolTip(file_path)
+        else:
+            # No file loaded - show placeholder text
+            self.file_label.setText("No file loaded")
+            # Clear tooltip when no file
+            self.file_label.setToolTip("")
+
+    def update_object_count_status(self, cell_count: int, net_count: int) -> None:
+        """Update visible object counts in status bar.
+
+        Updates the object_count_label text to show the current number of
+        visible cells and nets in the format "Cells: N / Nets: M".
+
+        This method is called:
+            - After initial file load and expansion
+            - When cells are expanded (counts increase)
+            - When cells are collapsed (counts decrease)
+            - When file is closed (counts reset to 0)
+
+        Args:
+            cell_count: Number of currently visible/rendered cells.
+            net_count: Number of currently visible/rendered nets.
+
+        Example:
+            >>> window.update_object_count_status(45, 67)
+            # Shows "Cells: 45 / Nets: 67"
+            >>> window.update_object_count_status(0, 0)
+            # Shows "Cells: 0 / Nets: 0"
+
+        Note:
+            For performance, this method directly updates the label text
+            without validation. The counts are trusted to come from the
+            expansion state which manages visible objects.
+
+        See Also:
+            - Spec E06-F04-T04 for object count display requirements
+            - E03-F01: Expansion service (emits view_changed signal)
+        """
+        self.object_count_label.setText(f"Cells: {cell_count} / Nets: {net_count}")
+
+    def _update_view_counts(self) -> None:
+        """Query and update visible object counts from expansion state.
+
+        This helper method retrieves the current visible cell and net counts
+        from the expansion_state and calls update_object_count_status() to
+        update the display. If expansion_state is not available, resets
+        counts to zero.
+
+        This method is typically connected to the expansion service's
+        view_changed signal for automatic updates when the user expands
+        or collapses cells.
+
+        Defensive handling:
+            - If expansion_state attribute doesn't exist: Shows 0 counts
+            - If expansion_state is None: Shows 0 counts
+            - If visible_cells/visible_nets are empty sets: Shows 0 counts
+
+        See Also:
+            - Spec E06-F04-T04 for object count display requirements
+            - E03-F01: Expansion service (provides expansion_state)
+        """
+        # Check if expansion_state exists and is not None
+        if hasattr(self, "expansion_state") and self.expansion_state:
+            # Query visible object counts from expansion state
+            cell_count = len(self.expansion_state.visible_cells)
+            net_count = len(self.expansion_state.visible_nets)
+            self.update_object_count_status(cell_count, net_count)
+        else:
+            # No expansion state available - show zeros
+            self.update_object_count_status(0, 0)
+
     def _connect_status_signals(self) -> None:
         """Connect signals to status bar update methods.
 
@@ -1702,18 +1804,25 @@ class InkMainWindow(QMainWindow):
         Signal Connections:
             - schematic_canvas.zoom_changed → update_zoom_status (E06-F04-T03)
             - selection_service.selection_changed → update_selection_status (E06-F04-T02)
+            - file_service.file_loaded → update_file_status (E06-F04-T04)
+            - file_service.file_closed → update_file_status(None) (E06-F04-T04)
+            - expansion_service.view_changed → _update_view_counts (E06-F04-T04)
 
         This method handles the case where the canvas or services may not yet
         be initialized by checking for attribute existence before attempting
-        connection.
+        connection. This defensive approach allows the UI to be functional
+        even before all services are integrated (graceful degradation).
 
         Called during window initialization after both the canvas and
         status bar have been created.
 
         See Also:
             - Spec E06-F04-T03 for zoom level display requirements
+            - Spec E06-F04-T04 for file and object count display requirements
             - E06-F04-T02: Selection status display specification
             - E04-F01: Selection service (provides selection_changed signal)
+            - E01-F02: File service (provides file_loaded/file_closed signals)
+            - E03-F01: Expansion service (provides view_changed signal)
         """
         # Connect zoom changes from canvas to status update (E06-F04-T03)
         # Check for signal existence to handle placeholder canvas gracefully
@@ -1729,6 +1838,25 @@ class InkMainWindow(QMainWindow):
                 service.selection_changed.connect(
                     lambda items: self.update_selection_status(len(items))
                 )
+
+        # Connect file service signals for file status updates (E06-F04-T04)
+        # file_loaded emits the absolute file path when a file is opened
+        # file_closed emits when the file is closed (clears status)
+        if hasattr(self, "file_service"):
+            service = self.file_service
+            # Connect file_loaded signal to update file status display
+            if hasattr(service, "file_loaded"):
+                service.file_loaded.connect(self.update_file_status)
+            # Connect file_closed signal to clear file status display
+            if hasattr(service, "file_closed"):
+                service.file_closed.connect(lambda: self.update_file_status(None))
+
+        # Connect expansion service signal for object count updates (E06-F04-T04)
+        # view_changed emits when visible cells/nets change (expand/collapse)
+        if hasattr(self, "expansion_service"):
+            service = self.expansion_service
+            if hasattr(service, "view_changed"):
+                service.view_changed.connect(self._update_view_counts)
 
     # =========================================================================
     # Window Geometry Persistence (E06-F06-T02)
