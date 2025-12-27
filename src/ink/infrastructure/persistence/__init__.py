@@ -5,8 +5,10 @@ and other platform-native storage mechanisms.
 
 Exports:
     AppSettings: Application settings manager using QSettings.
+    PanelSettingsStore: Panel layout state persistence using QSettings.
 """
 
 from ink.infrastructure.persistence.app_settings import AppSettings
+from ink.infrastructure.persistence.panel_settings_store import PanelSettingsStore
 
-__all__ = ["AppSettings"]
+__all__ = ["AppSettings", "PanelSettingsStore"]
