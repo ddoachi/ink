@@ -130,9 +130,7 @@ class TestUpdateSelectionStatusMethod:
         main_window.update_selection_status(1)
         assert main_window.selection_label.text() == "Selected: 1"
 
-    def test_update_selection_status_multiple(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_update_selection_status_multiple(self, main_window: InkMainWindow) -> None:
         """Test selection status shows correct count for multiple selections.
 
         When count is greater than 1, the label should display "Selected: N".
@@ -143,9 +141,7 @@ class TestUpdateSelectionStatusMethod:
         main_window.update_selection_status(42)
         assert main_window.selection_label.text() == "Selected: 42"
 
-    def test_update_selection_status_large_count(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_update_selection_status_large_count(self, main_window: InkMainWindow) -> None:
         """Test selection status handles large counts correctly.
 
         Large selections (1000+ items) should display normally without
@@ -157,9 +153,7 @@ class TestUpdateSelectionStatusMethod:
         main_window.update_selection_status(9999)
         assert main_window.selection_label.text() == "Selected: 9999"
 
-    def test_update_selection_status_format_consistency(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_update_selection_status_format_consistency(self, main_window: InkMainWindow) -> None:
         """Test selection status maintains consistent format.
 
         All count values should use the format "Selected: N" where N is
@@ -177,9 +171,7 @@ class TestUpdateSelectionStatusMethod:
 class TestUpdateSelectionStatusEdgeCases:
     """Tests for edge cases in update_selection_status()."""
 
-    def test_update_selection_status_rapid_updates(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_update_selection_status_rapid_updates(self, main_window: InkMainWindow) -> None:
         """Test rapid consecutive updates are handled correctly.
 
         The label should reflect the most recent value after rapid updates.
@@ -193,9 +185,7 @@ class TestUpdateSelectionStatusEdgeCases:
         # Should show the last value
         assert main_window.selection_label.text() == "Selected: 99"
 
-    def test_update_selection_status_same_value(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_update_selection_status_same_value(self, main_window: InkMainWindow) -> None:
         """Test updating with same value doesn't cause issues.
 
         Calling update with the same count should work without errors.
@@ -217,9 +207,7 @@ class TestUpdateSelectionStatusEdgeCases:
 class TestConnectStatusSignals:
     """Tests for _connect_status_signals() method."""
 
-    def test_connect_status_signals_method_exists(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_connect_status_signals_method_exists(self, main_window: InkMainWindow) -> None:
         """Test that _connect_status_signals() method exists.
 
         This method is responsible for connecting selection service signals
@@ -228,9 +216,7 @@ class TestConnectStatusSignals:
         assert hasattr(main_window, "_connect_status_signals")
         assert callable(main_window._connect_status_signals)
 
-    def test_no_error_without_selection_service(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_no_error_without_selection_service(self, main_window: InkMainWindow) -> None:
         """Test no error when selection service is not initialized.
 
         The method should handle the case where selection_service attribute
@@ -314,9 +300,7 @@ class TestSelectionServiceIntegration:
         mock_service.selection_changed.emit([])
         assert main_window.selection_label.text() == "Selected: 0"
 
-    def test_selection_service_missing_signal(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_selection_service_missing_signal(self, main_window: InkMainWindow) -> None:
         """Test graceful handling when service lacks selection_changed signal.
 
         If a selection service exists but doesn't have the expected signal,
