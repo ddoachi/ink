@@ -478,3 +478,296 @@ class TestNetNormalizerCustomNets:
 
         assert normalizer.normalize("AVDD").net_type == NetType.POWER
         assert normalizer.normalize("DVDD").net_type == NetType.POWER
+
+
+class TestNetNormalizerFromConfig:
+    """Tests for creating NetNormalizer from NetClassificationConfig.
+
+    These tests verify the from_config() factory method that creates a
+    NetNormalizer instance from a NetClassificationConfig object.
+
+    TDD Phase: RED - Tests written before implementation.
+    """
+
+    def test_from_config_uses_custom_power_names(self) -> None:
+        """Test factory uses power_names from config."""
+        from ink.infrastructure.config.net_classification_config import (
+            NetClassificationConfig,
+        )
+
+        config = NetClassificationConfig(
+            power_names=["AVDD", "DVDD"],
+            power_patterns=[],
+            ground_names=[],
+            ground_patterns=[],
+            override_defaults=False,
+        )
+
+        normalizer = NetNormalizer.from_config(config)
+
+        assert normalizer.normalize("AVDD").net_type == NetType.POWER
+        assert normalizer.normalize("DVDD").net_type == NetType.POWER
+
+    def test_from_config_uses_custom_ground_names(self) -> None:
+        """Test factory uses ground_names from config."""
+        from ink.infrastructure.config.net_classification_config import (
+            NetClassificationConfig,
+        )
+
+        config = NetClassificationConfig(
+            power_names=[],
+            power_patterns=[],
+            ground_names=["AVSS", "DVSS"],
+            ground_patterns=[],
+            override_defaults=False,
+        )
+
+        normalizer = NetNormalizer.from_config(config)
+
+        assert normalizer.normalize("AVSS").net_type == NetType.GROUND
+        assert normalizer.normalize("DVSS").net_type == NetType.GROUND
+
+    def test_from_config_adds_custom_power_patterns(self) -> None:
+        """Test factory adds custom power patterns to normalizer."""
+        from ink.infrastructure.config.net_classification_config import (
+            NetClassificationConfig,
+        )
+
+        config = NetClassificationConfig(
+            power_names=[],
+            power_patterns=["^PWR_.*$"],
+            ground_names=[],
+            ground_patterns=[],
+            override_defaults=False,
+        )
+
+        normalizer = NetNormalizer.from_config(config)
+
+        # Custom pattern should match
+        assert normalizer.normalize("PWR_CORE").net_type == NetType.POWER
+        assert normalizer.normalize("PWR_IO").net_type == NetType.POWER
+        # Non-matching should be SIGNAL
+        assert normalizer.normalize("POWER_CORE").net_type == NetType.SIGNAL
+
+    def test_from_config_adds_custom_ground_patterns(self) -> None:
+        """Test factory adds custom ground patterns to normalizer."""
+        from ink.infrastructure.config.net_classification_config import (
+            NetClassificationConfig,
+        )
+
+        config = NetClassificationConfig(
+            power_names=[],
+            power_patterns=[],
+            ground_names=[],
+            ground_patterns=["^GND_.*$"],
+            override_defaults=False,
+        )
+
+        normalizer = NetNormalizer.from_config(config)
+
+        # Custom pattern should match
+        assert normalizer.normalize("GND_CORE").net_type == NetType.GROUND
+        assert normalizer.normalize("GND_IO").net_type == NetType.GROUND
+
+    def test_from_config_preserves_defaults_when_override_false(self) -> None:
+        """Test factory keeps default patterns when override_defaults=False."""
+        from ink.infrastructure.config.net_classification_config import (
+            NetClassificationConfig,
+        )
+
+        config = NetClassificationConfig(
+            power_names=["AVDD"],
+            power_patterns=[],
+            ground_names=["AVSS"],
+            ground_patterns=[],
+            override_defaults=False,
+        )
+
+        normalizer = NetNormalizer.from_config(config)
+
+        # Custom names should work
+        assert normalizer.normalize("AVDD").net_type == NetType.POWER
+        assert normalizer.normalize("AVSS").net_type == NetType.GROUND
+        # Default patterns should still work
+        assert normalizer.normalize("VDD").net_type == NetType.POWER
+        assert normalizer.normalize("VSS").net_type == NetType.GROUND
+        assert normalizer.normalize("VDDA").net_type == NetType.POWER
+        assert normalizer.normalize("GND").net_type == NetType.GROUND
+
+    def test_from_config_clears_defaults_when_override_true(self) -> None:
+        """Test factory clears default patterns when override_defaults=True."""
+        from ink.infrastructure.config.net_classification_config import (
+            NetClassificationConfig,
+        )
+
+        config = NetClassificationConfig(
+            power_names=["AVDD"],
+            power_patterns=[],
+            ground_names=["AVSS"],
+            ground_patterns=[],
+            override_defaults=True,
+        )
+
+        normalizer = NetNormalizer.from_config(config)
+
+        # Custom names should work
+        assert normalizer.normalize("AVDD").net_type == NetType.POWER
+        assert normalizer.normalize("AVSS").net_type == NetType.GROUND
+        # Default patterns should NOT work (override=True)
+        assert normalizer.normalize("VDD").net_type == NetType.SIGNAL
+        assert normalizer.normalize("VSS").net_type == NetType.SIGNAL
+        assert normalizer.normalize("VDDA").net_type == NetType.SIGNAL
+        assert normalizer.normalize("GND").net_type == NetType.SIGNAL
+
+    def test_from_config_with_empty_config(self) -> None:
+        """Test factory with empty configuration."""
+        from ink.infrastructure.config.net_classification_config import (
+            NetClassificationConfig,
+        )
+
+        config = NetClassificationConfig()
+
+        normalizer = NetNormalizer.from_config(config)
+
+        # Default patterns should work
+        assert normalizer.normalize("VDD").net_type == NetType.POWER
+        assert normalizer.normalize("VSS").net_type == NetType.GROUND
+        assert normalizer.normalize("clk").net_type == NetType.SIGNAL
+
+    def test_from_config_with_combined_names_and_patterns(self) -> None:
+        """Test factory with both names and patterns configured."""
+        from ink.infrastructure.config.net_classification_config import (
+            NetClassificationConfig,
+        )
+
+        config = NetClassificationConfig(
+            power_names=["AVDD"],
+            power_patterns=["^VDDQ[0-9]*$"],
+            ground_names=["AVSS"],
+            ground_patterns=["^VSSQ[0-9]*$"],
+            override_defaults=False,
+        )
+
+        normalizer = NetNormalizer.from_config(config)
+
+        # Custom names
+        assert normalizer.normalize("AVDD").net_type == NetType.POWER
+        assert normalizer.normalize("AVSS").net_type == NetType.GROUND
+        # Custom patterns
+        assert normalizer.normalize("VDDQ0").net_type == NetType.POWER
+        assert normalizer.normalize("VDDQ1").net_type == NetType.POWER
+        assert normalizer.normalize("VSSQ0").net_type == NetType.GROUND
+        assert normalizer.normalize("VSSQ1").net_type == NetType.GROUND
+        # Default patterns
+        assert normalizer.normalize("VDD").net_type == NetType.POWER
+        assert normalizer.normalize("VSS").net_type == NetType.GROUND
+
+
+class TestNetNormalizerPatternMethods:
+    """Tests for pattern management methods on NetNormalizer.
+
+    These tests verify the add_power_patterns(), add_ground_patterns(),
+    and clear_default_patterns() methods.
+
+    TDD Phase: RED - Tests written before implementation.
+    """
+
+    def test_add_power_patterns_single(self) -> None:
+        """Test adding a single power pattern."""
+        normalizer = NetNormalizer()
+        normalizer.add_power_patterns(["^PWR_.*$"])
+
+        assert normalizer.normalize("PWR_CORE").net_type == NetType.POWER
+
+    def test_add_power_patterns_multiple(self) -> None:
+        """Test adding multiple power patterns."""
+        normalizer = NetNormalizer()
+        normalizer.add_power_patterns(["^PWR_.*$", "^VDDQ[0-9]*$"])
+
+        assert normalizer.normalize("PWR_CORE").net_type == NetType.POWER
+        assert normalizer.normalize("VDDQ0").net_type == NetType.POWER
+        assert normalizer.normalize("VDDQ1").net_type == NetType.POWER
+
+    def test_add_ground_patterns_single(self) -> None:
+        """Test adding a single ground pattern."""
+        normalizer = NetNormalizer()
+        normalizer.add_ground_patterns(["^GND_.*$"])
+
+        assert normalizer.normalize("GND_CORE").net_type == NetType.GROUND
+
+    def test_add_ground_patterns_multiple(self) -> None:
+        """Test adding multiple ground patterns."""
+        normalizer = NetNormalizer()
+        normalizer.add_ground_patterns(["^GND_.*$", "^VSSQ[0-9]*$"])
+
+        assert normalizer.normalize("GND_CORE").net_type == NetType.GROUND
+        assert normalizer.normalize("VSSQ0").net_type == NetType.GROUND
+        assert normalizer.normalize("VSSQ1").net_type == NetType.GROUND
+
+    def test_add_patterns_invalidates_cache(self) -> None:
+        """Test that adding patterns invalidates the cache."""
+        normalizer = NetNormalizer()
+
+        # First normalize - should be SIGNAL (no matching pattern)
+        info1 = normalizer.normalize("PWR_CORE")
+        assert info1.net_type == NetType.SIGNAL
+
+        # Add pattern
+        normalizer.add_power_patterns(["^PWR_.*$"])
+
+        # Normalize again - should be POWER (pattern added, cache invalidated)
+        info2 = normalizer.normalize("PWR_CORE")
+        assert info2.net_type == NetType.POWER
+
+        # Should NOT be the same object (cache was invalidated)
+        assert info1 is not info2
+
+    def test_clear_default_patterns(self) -> None:
+        """Test clearing default patterns."""
+        normalizer = NetNormalizer()
+
+        # Before clearing - defaults work
+        assert normalizer.normalize("VDD").net_type == NetType.POWER
+        assert normalizer.normalize("VSS").net_type == NetType.GROUND
+
+        # Clear defaults
+        normalizer.clear_default_patterns()
+
+        # After clearing - defaults don't work
+        assert normalizer.normalize("VDD_test").net_type == NetType.SIGNAL
+        assert normalizer.normalize("VSS_test").net_type == NetType.SIGNAL
+
+    def test_clear_default_patterns_preserves_custom_names(self) -> None:
+        """Test that clearing defaults preserves custom names."""
+        normalizer = NetNormalizer(power_nets=["AVDD"], ground_nets=["AVSS"])
+        normalizer.clear_default_patterns()
+
+        # Custom names should still work
+        assert normalizer.normalize("AVDD").net_type == NetType.POWER
+        assert normalizer.normalize("AVSS").net_type == NetType.GROUND
+
+    def test_clear_default_patterns_preserves_custom_patterns(self) -> None:
+        """Test that clearing defaults preserves custom patterns."""
+        normalizer = NetNormalizer()
+        normalizer.add_power_patterns(["^PWR_.*$"])
+        normalizer.add_ground_patterns(["^GND_.*$"])
+        normalizer.clear_default_patterns()
+
+        # Custom patterns should still work
+        assert normalizer.normalize("PWR_CORE").net_type == NetType.POWER
+        assert normalizer.normalize("GND_CORE").net_type == NetType.GROUND
+
+    def test_clear_default_patterns_invalidates_cache(self) -> None:
+        """Test that clearing defaults invalidates the cache."""
+        normalizer = NetNormalizer()
+
+        # Normalize with defaults
+        info1 = normalizer.normalize("VDD")
+        assert info1.net_type == NetType.POWER
+
+        # Clear defaults
+        normalizer.clear_default_patterns()
+
+        # Normalize again - VDD no longer matches (different result)
+        info2 = normalizer.normalize("VDD_new")
+        assert info2.net_type == NetType.SIGNAL
