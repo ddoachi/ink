@@ -1,8 +1,7 @@
 """CDL Parser Integration - Main parser orchestrating all components.
 
 This module provides the CDLParser class, which integrates all parsing components
-to produce a complete Design aggregate from CDL (Circuit Description Language)
-files.
+to produce a ParsedDesign from CDL (Circuit Description Language) files.
 
 The parser orchestrates:
 - CDLLexer: Line tokenization and classification
@@ -13,8 +12,8 @@ The parser orchestrates:
 Architecture:
     The CDLParser is an infrastructure component that bridges file I/O and
     the domain layer. It reads CDL files, coordinates parsing components,
-    and constructs a Design aggregate root that can be consumed by application
-    services.
+    and constructs a ParsedDesign that can be transformed into the domain
+    Design aggregate by a builder in the application layer.
 
     Parsing is performed in two passes:
     1. First pass: Collect all subcircuit definitions (.SUBCKT/.ENDS)
@@ -60,10 +59,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from ink.domain.model.design import Design
 from ink.infrastructure.parsing.cdl_lexer import CDLLexer, LineType
 from ink.infrastructure.parsing.instance_parser import InstanceParser
 from ink.infrastructure.parsing.net_normalizer import NetNormalizer
+from ink.infrastructure.parsing.parsed_design import ParsedDesign
 from ink.infrastructure.parsing.subcircuit_parser import SubcircuitParser
 
 if TYPE_CHECKING:
@@ -107,7 +106,7 @@ class ParsingError:
 class CDLParser:
     """Main CDL parser integrating all parsing components.
 
-    This class orchestrates the parsing of CDL files into a Design aggregate.
+    This class orchestrates the parsing of CDL files into a ParsedDesign.
     It handles:
     - Two-pass parsing (subcircuits first, then instances)
     - Error collection with line numbers
@@ -144,8 +143,8 @@ class CDLParser:
         self,
         file_path: Path,
         progress_callback: Callable[[int, int], None] | None = None,
-    ) -> Design:
-        """Parse a CDL file and return a Design aggregate.
+    ) -> ParsedDesign:
+        """Parse a CDL file and return a ParsedDesign.
 
         This is the main entry point for parsing CDL files. It performs:
         1. Tokenization via CDLLexer
@@ -153,7 +152,7 @@ class CDLParser:
         3. Validation of block completeness
         4. Second pass: Instance parsing with port mapping
         5. Net collection and normalization
-        6. Design aggregate construction
+        6. ParsedDesign construction
 
         Args:
             file_path: Path to the .ckt file to parse.
@@ -162,7 +161,7 @@ class CDLParser:
                              showing progress in UI.
 
         Returns:
-            Design aggregate root containing all parsed data.
+            ParsedDesign containing all parsed data.
 
         Raises:
             ValueError: If the file cannot be parsed due to critical errors
@@ -302,10 +301,10 @@ class CDLParser:
         subcircuit_defs: dict[str, SubcircuitDefinition],
         instances: list[CellInstance],
         net_normalizer: NetNormalizer,
-    ) -> Design:
-        """Construct Design aggregate from parsed components.
+    ) -> ParsedDesign:
+        """Construct ParsedDesign from parsed components.
 
-        Creates the Design aggregate root by:
+        Creates the ParsedDesign by:
         1. Building instance map (name -> CellInstance)
         2. Collecting all unique nets from instance connections
         3. Normalizing net names using NetNormalizer
@@ -317,7 +316,7 @@ class CDLParser:
             net_normalizer: Normalizer for net names.
 
         Returns:
-            Fully constructed Design aggregate.
+            Fully constructed ParsedDesign.
         """
         # Collect all unique nets from instance connections
         nets: dict[str, NetInfo] = {}
@@ -330,8 +329,8 @@ class CDLParser:
         # Build instance map
         instance_map = {inst.name: inst for inst in instances}
 
-        # Create and return the Design aggregate
-        return Design(
+        # Create and return the ParsedDesign
+        return ParsedDesign(
             name=name,
             subcircuit_defs=subcircuit_defs,
             instances=instance_map,
