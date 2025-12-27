@@ -202,9 +202,7 @@ class TestCentralWidgetIntegration:
         """Test central widget is schematic canvas."""
         assert main_window.centralWidget() == main_window.schematic_canvas
 
-    def test_central_widget_is_schematic_canvas_type(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_central_widget_is_schematic_canvas_type(self, main_window: InkMainWindow) -> None:
         """Test central widget is SchematicCanvas instance."""
         assert isinstance(main_window.centralWidget(), SchematicCanvas)
 
@@ -288,9 +286,7 @@ class TestDockWidgetIntegration:
 class TestDockWidgetOperations:
     """Test dock widget operations work correctly."""
 
-    def test_dock_close_and_show(
-        self, main_window: InkMainWindow, qapp: QApplication
-    ) -> None:
+    def test_dock_close_and_show(self, main_window: InkMainWindow, qapp: QApplication) -> None:
         """Test dock can be closed and shown."""
         # Close hierarchy dock
         main_window.hierarchy_dock.close()
@@ -302,9 +298,7 @@ class TestDockWidgetOperations:
         qapp.processEvents()
         assert not main_window.hierarchy_dock.isHidden()
 
-    def test_dock_float_and_unfloat(
-        self, main_window: InkMainWindow, qapp: QApplication
-    ) -> None:
+    def test_dock_float_and_unfloat(self, main_window: InkMainWindow, qapp: QApplication) -> None:
         """Test dock can be floated and re-docked."""
         # Float hierarchy dock
         main_window.hierarchy_dock.setFloating(True)
@@ -316,9 +310,7 @@ class TestDockWidgetOperations:
         qapp.processEvents()
         assert not main_window.hierarchy_dock.isFloating()
 
-    def test_multiple_docks_closable(
-        self, main_window: InkMainWindow, qapp: QApplication
-    ) -> None:
+    def test_multiple_docks_closable(self, main_window: InkMainWindow, qapp: QApplication) -> None:
         """Test multiple docks can be closed simultaneously."""
         # Close two docks
         main_window.hierarchy_dock.close()
@@ -336,9 +328,7 @@ class TestDockWidgetOperations:
         main_window.property_dock.show()
         qapp.processEvents()
 
-    def test_all_docks_can_float(
-        self, main_window: InkMainWindow, qapp: QApplication
-    ) -> None:
+    def test_all_docks_can_float(self, main_window: InkMainWindow, qapp: QApplication) -> None:
         """Test all docks can be floated."""
         main_window.hierarchy_dock.setFloating(True)
         main_window.property_dock.setFloating(True)
@@ -370,9 +360,7 @@ class TestWindowGeometry:
         assert main_window.width() == 1920
         assert main_window.height() == 1080
 
-    def test_window_respects_minimum(
-        self, main_window: InkMainWindow, qapp: QApplication
-    ) -> None:
+    def test_window_respects_minimum(self, main_window: InkMainWindow, qapp: QApplication) -> None:
         """Test window cannot be smaller than minimum when shown."""
         main_window.resize(500, 400)
         main_window.show()
@@ -384,9 +372,7 @@ class TestWindowGeometry:
 
         main_window.close()
 
-    def test_window_can_be_maximized(
-        self, main_window: InkMainWindow, qapp: QApplication
-    ) -> None:
+    def test_window_can_be_maximized(self, main_window: InkMainWindow, qapp: QApplication) -> None:
         """Test window can be maximized."""
         main_window.show()
         main_window.showMaximized()
@@ -395,9 +381,7 @@ class TestWindowGeometry:
         # We just verify no crash occurs
         main_window.close()
 
-    def test_window_can_be_minimized(
-        self, main_window: InkMainWindow, qapp: QApplication
-    ) -> None:
+    def test_window_can_be_minimized(self, main_window: InkMainWindow, qapp: QApplication) -> None:
         """Test window can be minimized."""
         main_window.show()
         main_window.showMinimized()
@@ -432,9 +416,7 @@ class TestWindowLifecycle:
         window.deleteLater()
         qapp.processEvents()
 
-    def test_window_cleanup(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_window_cleanup(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Test window cleans up properly when deleted."""
         window = InkMainWindow(app_settings)
         window.show()
@@ -444,9 +426,7 @@ class TestWindowLifecycle:
         qapp.processEvents()
         # No assertion - just verify no crash
 
-    def test_multiple_windows(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_multiple_windows(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Test multiple windows can coexist."""
         # Create fresh app_settings for second window
         settings2 = AppSettings()
@@ -467,9 +447,7 @@ class TestWindowLifecycle:
         window2.deleteLater()
         qapp.processEvents()
 
-    def test_repeated_create_destroy(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_repeated_create_destroy(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Test repeated window creation and destruction doesn't leak."""
         for _ in range(10):
             window = InkMainWindow(app_settings)
@@ -537,16 +515,12 @@ class TestUIPolish:
         assert stylesheet is not None
         assert len(stylesheet) > 0
 
-    def test_stylesheet_contains_splitter_styling(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_stylesheet_contains_splitter_styling(self, main_window: InkMainWindow) -> None:
         """Test stylesheet includes splitter handle styling."""
         stylesheet = main_window.styleSheet()
         assert "QSplitter::handle" in stylesheet
 
-    def test_stylesheet_contains_dock_styling(
-        self, main_window: InkMainWindow
-    ) -> None:
+    def test_stylesheet_contains_dock_styling(self, main_window: InkMainWindow) -> None:
         """Test stylesheet includes dock widget styling."""
         stylesheet = main_window.styleSheet()
         assert "QDockWidget" in stylesheet
@@ -559,9 +533,7 @@ class TestUIPolish:
 class TestPerformanceBasic:
     """Basic performance tests that don't require benchmark plugin."""
 
-    def test_window_creation_is_fast(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_window_creation_is_fast(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Test window creation time is reasonable."""
         start = time.perf_counter()
         window = InkMainWindow(app_settings)
@@ -573,9 +545,7 @@ class TestPerformanceBasic:
         # Should complete in under 500ms
         assert elapsed < 0.5, f"Window creation took {elapsed:.3f}s, exceeds 500ms limit"
 
-    def test_startup_under_2_seconds(
-        self, qapp: QApplication, app_settings: AppSettings
-    ) -> None:
+    def test_startup_under_2_seconds(self, qapp: QApplication, app_settings: AppSettings) -> None:
         """Test complete startup (create + show) is under 2 seconds."""
         start = time.perf_counter()
 

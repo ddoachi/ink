@@ -84,9 +84,7 @@ def app_settings(isolated_settings: Path) -> AppSettings:
 class TestMainWindowCentralWidget:
     """Tests for central widget integration."""
 
-    def test_main_window_has_central_widget(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_main_window_has_central_widget(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test main window has a central widget set.
 
         Central widget is required for QMainWindow to display primary content.
@@ -141,9 +139,7 @@ class TestMainWindowCentralWidget:
 class TestCanvasParentRelationship:
     """Tests for Qt parent-child relationship."""
 
-    def test_canvas_parent_is_main_window(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_canvas_parent_is_main_window(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test canvas parent is set to main window.
 
         Qt ownership: parent automatically deletes children on destruction.
@@ -154,9 +150,7 @@ class TestCanvasParentRelationship:
         # Note: centralWidget's parent is the window, verified via parent()
         assert window.schematic_canvas.parent() == window
 
-    def test_canvas_is_child_of_main_window(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_canvas_is_child_of_main_window(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test canvas appears in main window's children.
 
         Verifies proper Qt object hierarchy.
@@ -189,9 +183,7 @@ class TestCanvasVisibility:
 
         assert window.schematic_canvas.isVisible()
 
-    def test_canvas_geometry_is_reasonable(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_canvas_geometry_is_reasonable(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test canvas has non-zero dimensions when window is shown.
 
         Canvas should expand to fill available central area.

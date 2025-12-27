@@ -82,9 +82,7 @@ def app_settings(isolated_settings: Path) -> AppSettings:
 
 
 @pytest.fixture
-def window(
-    qapp: QApplication, app_settings: AppSettings
-) -> Generator[InkMainWindow, None, None]:
+def window(qapp: QApplication, app_settings: AppSettings) -> Generator[InkMainWindow, None, None]:
     """Create main window for each test and cleanup after.
 
     Each test gets a fresh window instance to avoid state pollution

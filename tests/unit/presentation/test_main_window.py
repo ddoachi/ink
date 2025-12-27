@@ -84,9 +84,7 @@ def app_settings(isolated_settings: Path) -> AppSettings:
 class TestInkMainWindowCreation:
     """Tests for InkMainWindow instantiation."""
 
-    def test_main_window_can_be_created(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_main_window_can_be_created(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test that InkMainWindow can be instantiated without errors.
 
         Verifies:
@@ -116,9 +114,7 @@ class TestInkMainWindowCreation:
 class TestInkMainWindowTitle:
     """Tests for window title configuration."""
 
-    def test_window_title_is_set_correctly(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_window_title_is_set_correctly(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test window title matches spec requirement.
 
         Expected: "Ink - Incremental Schematic Viewer"
@@ -132,9 +128,7 @@ class TestInkMainWindowTitle:
 class TestInkMainWindowSize:
     """Tests for window size configuration."""
 
-    def test_window_default_width_is_1280(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_window_default_width_is_1280(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test default window width is 1280 pixels (geometry persistence default).
 
         With geometry persistence enabled, the window uses smaller defaults
@@ -145,9 +139,7 @@ class TestInkMainWindowSize:
 
         assert window.width() == 1280
 
-    def test_window_default_height_is_800(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_window_default_height_is_800(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test default window height is 800 pixels (geometry persistence default).
 
         With geometry persistence enabled, the window uses smaller defaults
@@ -158,9 +150,7 @@ class TestInkMainWindowSize:
 
         assert window.height() == 800
 
-    def test_window_minimum_width_is_1024(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_window_minimum_width_is_1024(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test minimum window width is 1024 pixels.
 
         Below this, UI elements become too crowded.
@@ -170,9 +160,7 @@ class TestInkMainWindowSize:
 
         assert window.minimumWidth() == 1024
 
-    def test_window_minimum_height_is_768(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_window_minimum_height_is_768(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test minimum window height is 768 pixels.
 
         1024x768 is common minimum for professional tools.
@@ -203,9 +191,7 @@ class TestInkMainWindowSize:
 class TestInkMainWindowFlags:
     """Tests for window flags and decorations."""
 
-    def test_window_has_title_hint(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_window_has_title_hint(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test window has title bar hint enabled."""
         window = InkMainWindow(app_settings)
         qtbot.addWidget(window)
@@ -213,9 +199,7 @@ class TestInkMainWindowFlags:
         flags = window.windowFlags()
         assert flags & Qt.WindowType.WindowTitleHint
 
-    def test_window_has_system_menu_hint(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_window_has_system_menu_hint(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test window has system menu hint enabled."""
         window = InkMainWindow(app_settings)
         qtbot.addWidget(window)
@@ -223,9 +207,7 @@ class TestInkMainWindowFlags:
         flags = window.windowFlags()
         assert flags & Qt.WindowType.WindowSystemMenuHint
 
-    def test_window_has_minimize_button_hint(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_window_has_minimize_button_hint(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test window has minimize button hint enabled."""
         window = InkMainWindow(app_settings)
         qtbot.addWidget(window)
@@ -233,9 +215,7 @@ class TestInkMainWindowFlags:
         flags = window.windowFlags()
         assert flags & Qt.WindowType.WindowMinimizeButtonHint
 
-    def test_window_has_maximize_button_hint(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_window_has_maximize_button_hint(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test window has maximize button hint enabled."""
         window = InkMainWindow(app_settings)
         qtbot.addWidget(window)
@@ -243,9 +223,7 @@ class TestInkMainWindowFlags:
         flags = window.windowFlags()
         assert flags & Qt.WindowType.WindowMaximizeButtonHint
 
-    def test_window_has_close_button_hint(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_window_has_close_button_hint(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Test window has close button hint enabled."""
         window = InkMainWindow(app_settings)
         qtbot.addWidget(window)

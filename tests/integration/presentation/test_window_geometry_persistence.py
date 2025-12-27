@@ -102,9 +102,7 @@ class TestMainWindowAcceptsAppSettings:
 
         assert window is not None
 
-    def test_main_window_stores_app_settings(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_main_window_stores_app_settings(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Verify InkMainWindow stores app_settings as attribute."""
         window = InkMainWindow(app_settings=app_settings)
         qtbot.addWidget(window)
@@ -116,9 +114,7 @@ class TestMainWindowAcceptsAppSettings:
 class TestWindowGeometryRestoration:
     """Tests for window geometry restoration on startup."""
 
-    def test_restores_saved_window_size(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_restores_saved_window_size(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Verify window size is restored from saved geometry."""
         # Create first window and resize it
         window1 = InkMainWindow(app_settings=app_settings)
@@ -155,9 +151,7 @@ class TestWindowGeometryRestoration:
 class TestWindowStatePersistence:
     """Tests for window state (dock widgets, maximized, etc.) persistence."""
 
-    def test_restores_saved_window_state(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_restores_saved_window_state(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Verify window state is restored from saved state."""
         # This test verifies the mechanism works, even without actual dock widgets
         window1 = InkMainWindow(app_settings=app_settings)
@@ -179,9 +173,7 @@ class TestWindowStatePersistence:
 class TestCloseEventGeometrySaving:
     """Tests for geometry saving on window close."""
 
-    def test_saves_geometry_on_close(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_saves_geometry_on_close(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Verify window geometry is saved when window closes."""
         window = InkMainWindow(app_settings=app_settings)
         qtbot.addWidget(window)
@@ -197,9 +189,7 @@ class TestCloseEventGeometrySaving:
         # Verify geometry was saved
         assert app_settings.has_window_geometry()
 
-    def test_saves_state_on_close(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_saves_state_on_close(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Verify window state is saved when window closes."""
         window = InkMainWindow(app_settings=app_settings)
         qtbot.addWidget(window)
@@ -214,9 +204,7 @@ class TestCloseEventGeometrySaving:
         # Verify state was saved
         assert app_settings.has_window_state()
 
-    def test_close_event_syncs_settings(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_close_event_syncs_settings(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Verify settings are synced to disk on window close."""
         window = InkMainWindow(app_settings=app_settings)
         qtbot.addWidget(window)
@@ -227,9 +215,7 @@ class TestCloseEventGeometrySaving:
 
             mock_sync.assert_called_once()
 
-    def test_close_event_is_accepted(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_close_event_is_accepted(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Verify close event is accepted (window closes)."""
         window = InkMainWindow(app_settings=app_settings)
         qtbot.addWidget(window)
@@ -320,9 +306,7 @@ class TestInvalidGeometryHandling:
 class TestCenterOnScreen:
     """Tests for window centering behavior."""
 
-    def test_centers_on_screen_on_first_run(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_centers_on_screen_on_first_run(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Verify window is centered on screen on first run."""
         window = InkMainWindow(app_settings=app_settings)
         qtbot.addWidget(window)
@@ -338,9 +322,7 @@ class TestCenterOnScreen:
         assert abs(window.x() - expected_x) <= 50
         assert abs(window.y() - expected_y) <= 50
 
-    def test_has_center_on_screen_method(
-        self, qtbot: QtBot, app_settings: AppSettings
-    ) -> None:
+    def test_has_center_on_screen_method(self, qtbot: QtBot, app_settings: AppSettings) -> None:
         """Verify _center_on_screen private method exists."""
         window = InkMainWindow(app_settings=app_settings)
         qtbot.addWidget(window)

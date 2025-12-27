@@ -115,9 +115,7 @@ def temp_files(tmp_path: Path) -> list[str]:
 class TestAddRecentFile:
     """Test AppSettings.add_recent_file() method."""
 
-    def test_add_single_file(
-        self, app_settings: AppSettings, temp_files: list[str]
-    ) -> None:
+    def test_add_single_file(self, app_settings: AppSettings, temp_files: list[str]) -> None:
         """Test adding a single file to recent files list."""
         app_settings.add_recent_file(temp_files[0])
 
@@ -168,9 +166,7 @@ class TestAddRecentFile:
         # Oldest kept file should be temp_files[5]
         assert recent[9] == temp_files[5]
 
-    def test_stores_absolute_path(
-        self, app_settings: AppSettings, tmp_path: Path
-    ) -> None:
+    def test_stores_absolute_path(self, app_settings: AppSettings, tmp_path: Path) -> None:
         """Test that file paths are stored as absolute paths."""
         file = tmp_path / "test.ckt"
         file.write_text("* content\n")
@@ -186,9 +182,7 @@ class TestAddRecentFile:
 class TestGetRecentFiles:
     """Test AppSettings.get_recent_files() method."""
 
-    def test_returns_empty_list_when_no_files(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_returns_empty_list_when_no_files(self, app_settings: AppSettings) -> None:
         """Test that empty list is returned when no recent files exist."""
         recent = app_settings.get_recent_files()
         assert isinstance(recent, list)
@@ -237,9 +231,7 @@ class TestGetRecentFiles:
         assert len(recent) == 1
         assert recent[0] == temp_files[1]
 
-    def test_preserves_order(
-        self, app_settings: AppSettings, temp_files: list[str]
-    ) -> None:
+    def test_preserves_order(self, app_settings: AppSettings, temp_files: list[str]) -> None:
         """Test that file order is preserved (newest first)."""
         for i in range(5):
             app_settings.add_recent_file(temp_files[i])
@@ -257,9 +249,7 @@ class TestGetRecentFiles:
 class TestClearRecentFiles:
     """Test AppSettings.clear_recent_files() method."""
 
-    def test_clears_all_files(
-        self, app_settings: AppSettings, temp_files: list[str]
-    ) -> None:
+    def test_clears_all_files(self, app_settings: AppSettings, temp_files: list[str]) -> None:
         """Test that clear removes all recent files."""
         app_settings.add_recent_file(temp_files[0])
         app_settings.add_recent_file(temp_files[1])
@@ -269,9 +259,7 @@ class TestClearRecentFiles:
         recent = app_settings.get_recent_files()
         assert len(recent) == 0
 
-    def test_clear_when_empty_does_nothing(
-        self, app_settings: AppSettings
-    ) -> None:
+    def test_clear_when_empty_does_nothing(self, app_settings: AppSettings) -> None:
         """Test that clearing empty list doesn't cause errors."""
         # Should not raise
         app_settings.clear_recent_files()
@@ -305,9 +293,7 @@ class TestSetMaxRecentFiles:
         max_recent = app_settings.get_max_recent_files()
         assert max_recent == 5
 
-    def test_trims_existing_list(
-        self, app_settings: AppSettings, temp_files: list[str]
-    ) -> None:
+    def test_trims_existing_list(self, app_settings: AppSettings, temp_files: list[str]) -> None:
         """Test that changing max trims existing list."""
         # Add 10 files
         for i in range(10):
@@ -345,9 +331,7 @@ class TestSetMaxRecentFiles:
 class TestRecentFilesPersistence:
     """Test that recent files persist across AppSettings instances."""
 
-    def test_files_persist_across_instances(
-        self, isolated_settings: Path, tmp_path: Path
-    ) -> None:
+    def test_files_persist_across_instances(self, isolated_settings: Path, tmp_path: Path) -> None:
         """Test that recent files survive instance recreation."""
         # Create test files
         files = []
@@ -404,19 +388,14 @@ class TestRecentFilesEdgeCases:
         app_settings.add_recent_file(temp_files[0])
 
         # Manually set list with empty string (simulates corruption)
-        app_settings.set_value(
-            AppSettings.KEY_RECENT_FILES,
-            [temp_files[0], "", temp_files[1]]
-        )
+        app_settings.set_value(AppSettings.KEY_RECENT_FILES, [temp_files[0], "", temp_files[1]])
 
         recent = app_settings.get_recent_files()
         # Empty string should be filtered out, and temp_files[1] doesn't exist yet
         # Actually temp_files[1] exists in temp_files fixture, so check existence
         assert "" not in recent
 
-    def test_handles_path_with_spaces(
-        self, app_settings: AppSettings, tmp_path: Path
-    ) -> None:
+    def test_handles_path_with_spaces(self, app_settings: AppSettings, tmp_path: Path) -> None:
         """Test that paths with spaces are handled correctly."""
         file = tmp_path / "my design file.ckt"
         file.write_text("* content\n")
@@ -428,9 +407,7 @@ class TestRecentFilesEdgeCases:
         assert " " in recent[0]
         assert Path(recent[0]).exists()
 
-    def test_handles_unicode_path(
-        self, app_settings: AppSettings, tmp_path: Path
-    ) -> None:
+    def test_handles_unicode_path(self, app_settings: AppSettings, tmp_path: Path) -> None:
         """Test that unicode characters in paths are handled."""
         file = tmp_path / "设计_ファイル.ckt"
         file.write_text("* content\n")
