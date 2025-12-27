@@ -28,12 +28,14 @@ See Also:
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QAction, QCloseEvent, QGuiApplication, QIcon, QKeySequence
 from PySide6.QtWidgets import (
+    QApplication,
     QDockWidget,
     QFileDialog,
     QLabel,
@@ -1085,6 +1087,10 @@ class InkMainWindow(QMainWindow):
         - All panels visible
 
         The action is added to the Panels submenu with a keyboard shortcut.
+
+        See Also:
+            - Spec E06-F05-T04 for default layout reset requirements
+            - reset_panel_layout() for the implementation
         """
         self.reset_panel_layout_action = QAction("&Reset Panel Layout", self)
         self.reset_panel_layout_action.setShortcut("Ctrl+Shift+R")
@@ -1094,35 +1100,9 @@ class InkMainWindow(QMainWindow):
         self.reset_panel_layout_action.setStatusTip(
             "Reset panel layout to defaults (Ctrl+Shift+R)"
         )
-        self.reset_panel_layout_action.triggered.connect(self._reset_panel_layout)
+        # Connect to public method that includes confirmation dialog
+        self.reset_panel_layout_action.triggered.connect(self.reset_panel_layout)
         self.panels_menu.addAction(self.reset_panel_layout_action)
-
-    def _reset_panel_layout(self) -> None:
-        """Reset panels to default layout.
-
-        Restores the default panel configuration:
-        - Hierarchy dock: Left area, visible
-        - Property dock: Right area, visible
-        - Message dock: Bottom area, visible
-        - All panels undocked (not floating)
-
-        This provides a quick way to restore a familiar layout if the user
-        has accidentally misconfigured their panels or wants to start fresh.
-        """
-        # Restore hierarchy dock to left area
-        self.hierarchy_dock.setFloating(False)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.hierarchy_dock)
-        self.hierarchy_dock.show()
-
-        # Restore property dock to right area
-        self.property_dock.setFloating(False)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.property_dock)
-        self.property_dock.show()
-
-        # Restore message dock to bottom area
-        self.message_dock.setFloating(False)
-        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.message_dock)
-        self.message_dock.show()
 
     def _create_help_menu(self) -> None:
         """Create Help menu items.
@@ -1918,20 +1898,185 @@ class InkMainWindow(QMainWindow):
         self.panel_settings_store.save_panel_state(current_state)
 
     def reset_panel_layout(self) -> None:
-        """Clear saved panel layout (reset to defaults).
+        """Reset panel layout to default configuration with confirmation.
 
-        Removes all saved panel settings, causing the next application
-        startup to use default panel positions and visibility.
+        Shows a confirmation dialog before resetting. If confirmed:
+        1. Clears all saved panel state from QSettings
+        2. Removes and re-adds dock widgets in default positions
+        3. Sets all panels visible and docked (not floating)
+        4. Applies default sizes (15%, 25%, 20%)
+        5. Updates panel state manager with new state
+        6. Shows success message in status bar
 
-        This method can be called from:
-        - Help > Settings > Reset Panel Layout menu action
-        - Programmatically when debugging layout issues
+        The confirmation dialog prevents accidental resets and clearly
+        explains the consequences of the action.
 
-        Post-reset behavior:
-            - Next startup will use default panel layout
-            - Current session layout is NOT affected (restart required)
+        This method is connected to:
+        - View > Panels > Reset Panel Layout menu action
+        - Keyboard shortcut Ctrl+Shift+R
+
+        Design Decisions:
+            - Requires confirmation (destructive action, no undo in MVP)
+            - Default button is "No" (safe default, user must click Yes)
+            - Remove/re-add approach clears all Qt internal state
+            - Status bar message provides non-intrusive success feedback
+            - Error handling prevents crashes and logs issues
+
+        See Also:
+            - Spec E06-F05-T04 for default layout reset requirements
+            - Pre-docs E06-F05-T04.pre-docs.md for implementation details
+            - _apply_default_panel_layout() for the actual layout reset
         """
-        self.panel_settings_store.clear_panel_state()
+        # Step 1: Show confirmation dialog
+        # Destructive action requires explicit user consent
+        result = QMessageBox.question(
+            self,
+            "Reset Panel Layout",
+            "This will reset all panels to their default positions and sizes.\n"
+            "Any custom layout will be lost.\n\n"
+            "Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,  # Default to No for safety
+        )
+
+        # User cancelled the reset
+        if result != QMessageBox.StandardButton.Yes:
+            return
+
+        # Step 2: Perform reset with error handling
+        try:
+            # Clear saved panel settings from QSettings
+            # This ensures the reset persists across restarts
+            self.panel_settings_store.clear_panel_state()
+
+            # Apply the default panel layout
+            self._apply_default_panel_layout()
+
+            # Show success feedback in status bar (3 second timeout)
+            self.statusBar().showMessage("Panel layout reset to default", 3000)
+
+        except Exception as e:
+            # Log the error for debugging
+            logging.exception("Failed to reset panel layout")
+
+            # Show user-friendly error message
+            QMessageBox.warning(
+                self,
+                "Reset Failed",
+                f"Failed to reset panel layout: {e!s}\n\n"
+                "Please restart the application.",
+                QMessageBox.StandardButton.Ok,
+            )
+
+    def _apply_default_panel_layout(self) -> None:
+        """Apply the default panel layout configuration.
+
+        Removes all dock widgets and re-adds them in default positions.
+        This approach ensures a clean slate by clearing Qt's internal
+        dock layout state (splitters, tabs, z-order).
+
+        Default Layout:
+            - Hierarchy: Left dock area, 15% width
+            - Properties: Right dock area, 25% width
+            - Messages: Bottom dock area, 20% height
+            - All panels visible and docked (not floating)
+
+        This method is called by reset_panel_layout() after confirmation.
+        It should not be called directly as it doesn't handle persistence.
+
+        Design Decisions:
+            - Remove/re-add clears all Qt internal dock state
+            - setFloating(False) before addDockWidget ensures docked state
+            - show() after addDockWidget ensures visibility
+            - processEvents() before resize ensures accurate geometry
+            - capture_state() updates PanelStateManager with new state
+
+        See Also:
+            - Spec E06-F05-T04 for default layout requirements
+            - _set_default_dock_sizes() for size application
+        """
+        # Step 1: Remove all dock widgets to clear Qt's internal state
+        # This clears tabs, splitters, and nested dock arrangements
+        self.removeDockWidget(self.hierarchy_dock)
+        self.removeDockWidget(self.property_dock)
+        self.removeDockWidget(self.message_dock)
+
+        # Step 2: Re-add dock widgets in default positions
+        self.addDockWidget(
+            Qt.DockWidgetArea.LeftDockWidgetArea,
+            self.hierarchy_dock,
+        )
+        self.addDockWidget(
+            Qt.DockWidgetArea.RightDockWidgetArea,
+            self.property_dock,
+        )
+        self.addDockWidget(
+            Qt.DockWidgetArea.BottomDockWidgetArea,
+            self.message_dock,
+        )
+
+        # Step 3: Ensure all panels are visible and docked (not floating)
+        for dock in [self.hierarchy_dock, self.property_dock, self.message_dock]:
+            dock.setFloating(False)
+            dock.show()
+
+        # Step 4: Apply default sizes
+        self._set_default_dock_sizes()
+
+        # Step 5: Update panel state manager with new state
+        # This ensures state tracking is synchronized with the UI
+        self.panel_state_manager.capture_state()
+
+    def _set_default_dock_sizes(self) -> None:
+        """Set default panel sizes as percentages of window dimensions.
+
+        Applies proportional sizing to dock widgets:
+            - Hierarchy: 15% of window width
+            - Properties: 25% of window width
+            - Messages: 20% of window height
+
+        Uses processEvents() before resizing to ensure Qt's layout
+        system has processed the dock widget additions and geometry
+        calculations are accurate.
+
+        This method is called by _apply_default_panel_layout() after
+        dock widgets have been positioned.
+
+        Design Decisions:
+            - Proportional sizing adapts to different window sizes
+            - processEvents() ensures accurate geometry calculations
+            - resizeDocks() is the Qt-recommended way to set dock sizes
+
+        See Also:
+            - Spec E06-F05-T04 for default size specifications
+        """
+        # Wait for layout to settle (Qt layout is asynchronous)
+        # This ensures width() and height() return accurate values
+        QApplication.processEvents()
+
+        width = self.width()
+        height = self.height()
+
+        # Hierarchy panel: 15% of window width (narrow tree view)
+        self.resizeDocks(
+            [self.hierarchy_dock],
+            [int(width * 0.15)],
+            Qt.Orientation.Horizontal,
+        )
+
+        # Property panel: 25% of window width (wider for property details)
+        self.resizeDocks(
+            [self.property_dock],
+            [int(width * 0.25)],
+            Qt.Orientation.Horizontal,
+        )
+
+        # Message panel: 20% of window height (bottom strip for logs)
+        self.resizeDocks(
+            [self.message_dock],
+            [int(height * 0.20)],
+            Qt.Orientation.Vertical,
+        )
 
     # =========================================================================
     # Settings Menu Action Handlers (E06-F06-T04)
