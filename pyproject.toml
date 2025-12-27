@@ -9,6 +9,7 @@ authors = [{ name = "Ink Team" }]
 dependencies = [
     "PySide6>=6.6.0",
     "networkx>=3.2",
+    "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -254,4 +255,5 @@ dev = [
     "pytest-cov>=7.0.0",
     "pytest-qt>=4.5.0",
     "ruff>=0.14.10",
+    "types-PyYAML>=6.0",
 ]

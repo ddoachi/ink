@@ -29,13 +29,28 @@ Example Usage:
     >>> info = normalizer.normalize("VDD!")
     >>> print(info.net_type)  # NetType.POWER
     >>> print(info.normalized_name)  # "VDD"
+
+    >>> # Create from per-project configuration
+    >>> from ink.infrastructure.config.net_classification_config import (
+    ...     NetClassificationConfig,
+    ... )
+    >>> config = NetClassificationConfig.load(project_path)
+    >>> normalizer = NetNormalizer.from_config(config)
 """
 
+from __future__ import annotations
+
 import re
-from collections.abc import Iterable
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from ink.domain.value_objects.net import NetInfo, NetType
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from ink.infrastructure.config.net_classification_config import (
+        NetClassificationConfig,
+    )
 
 
 class NetNormalizer:
@@ -138,6 +153,16 @@ class NetNormalizer:
         self._ground_nets: set[str] = (
             {name.upper() for name in ground_nets} if ground_nets else set()
         )
+
+        # Custom regex patterns for power/ground nets (user-defined via configuration)
+        # These are checked in addition to the class-level default patterns
+        self._custom_power_patterns: set[str] = set()
+        self._custom_ground_patterns: set[str] = set()
+
+        # Flag to control whether default patterns (POWER_PATTERNS, GROUND_PATTERNS)
+        # are used during classification. When True, only custom names and patterns
+        # are used for classification.
+        self._use_default_patterns: bool = True
 
         # Cache for normalized net info - maps original name to NetInfo
         # This significantly improves performance for large netlists where
@@ -244,7 +269,8 @@ class NetNormalizer:
 
         Classification priority:
         1. Custom individual net names (exact match, case-insensitive)
-        2. Default regex patterns (case-insensitive)
+        2. Custom regex patterns (user-defined via add_power_patterns/add_ground_patterns)
+        3. Default regex patterns (if _use_default_patterns is True)
 
         Args:
             net_name: Net name to classify (should be already cleaned of
@@ -273,15 +299,23 @@ class NetNormalizer:
         if net_name_upper in self._ground_nets:
             return NetType.GROUND
 
-        # Priority 2: Check against default power patterns (case-insensitive)
-        for pattern in self.POWER_PATTERNS:
-            if re.match(pattern, net_name, re.IGNORECASE):
-                return NetType.POWER
+        # Collect all power patterns to check (custom + default if enabled)
+        power_patterns = list(self._custom_power_patterns)
+        if self._use_default_patterns:
+            power_patterns.extend(self.POWER_PATTERNS)
 
-        # Priority 3: Check against default ground patterns (case-insensitive)
-        for pattern in self.GROUND_PATTERNS:
-            if re.match(pattern, net_name, re.IGNORECASE):
-                return NetType.GROUND
+        # Collect all ground patterns to check (custom + default if enabled)
+        ground_patterns = list(self._custom_ground_patterns)
+        if self._use_default_patterns:
+            ground_patterns.extend(self.GROUND_PATTERNS)
+
+        # Check against all power patterns
+        if any(re.match(p, net_name, re.IGNORECASE) for p in power_patterns):
+            return NetType.POWER
+
+        # Check against all ground patterns
+        if any(re.match(p, net_name, re.IGNORECASE) for p in ground_patterns):
+            return NetType.GROUND
 
         # Default: regular signal net
         return NetType.SIGNAL
@@ -309,3 +343,115 @@ class NetNormalizer:
         """
         info = self.normalize(net_name)
         return info.net_type in (NetType.POWER, NetType.GROUND)
+
+    def add_power_patterns(self, patterns: Iterable[str]) -> None:
+        """Add custom regex patterns for power net classification.
+
+        These patterns are checked in addition to the default patterns
+        (unless clear_default_patterns() has been called). Adding patterns
+        invalidates the cache to ensure correct classification.
+
+        Args:
+            patterns: Regex patterns to match power nets.
+                Example: ["^PWR_.*$", "^VDDQ[0-9]*$"]
+
+        Example:
+            >>> normalizer = NetNormalizer()
+            >>> normalizer.add_power_patterns(["^PWR_.*$"])
+            >>> normalizer.normalize("PWR_CORE").net_type == NetType.POWER
+            True
+        """
+        self._custom_power_patterns.update(patterns)
+        # Invalidate cache since classification results may have changed
+        self._net_cache.clear()
+
+    def add_ground_patterns(self, patterns: Iterable[str]) -> None:
+        """Add custom regex patterns for ground net classification.
+
+        These patterns are checked in addition to the default patterns
+        (unless clear_default_patterns() has been called). Adding patterns
+        invalidates the cache to ensure correct classification.
+
+        Args:
+            patterns: Regex patterns to match ground nets.
+                Example: ["^GND_.*$", "^VSSQ[0-9]*$"]
+
+        Example:
+            >>> normalizer = NetNormalizer()
+            >>> normalizer.add_ground_patterns(["^GND_.*$"])
+            >>> normalizer.normalize("GND_CORE").net_type == NetType.GROUND
+            True
+        """
+        self._custom_ground_patterns.update(patterns)
+        # Invalidate cache since classification results may have changed
+        self._net_cache.clear()
+
+    def clear_default_patterns(self) -> None:
+        """Disable default power/ground patterns.
+
+        After calling this method, only custom names (from constructor) and
+        custom patterns (from add_power_patterns/add_ground_patterns) will
+        be used for classification. The default VDD/VSS/GND patterns will
+        be ignored.
+
+        This is useful when the default patterns conflict with a project's
+        naming conventions, or when you want complete control over classification.
+
+        The cache is invalidated to ensure correct classification.
+
+        Example:
+            >>> normalizer = NetNormalizer(power_nets=["AVDD"])
+            >>> normalizer.clear_default_patterns()
+            >>> normalizer.normalize("VDD").net_type == NetType.SIGNAL  # No longer POWER
+            True
+            >>> normalizer.normalize("AVDD").net_type == NetType.POWER  # Custom still works
+            True
+        """
+        self._use_default_patterns = False
+        # Invalidate cache since classification results may have changed
+        self._net_cache.clear()
+
+    @classmethod
+    def from_config(cls, config: NetClassificationConfig) -> NetNormalizer:
+        """Create a NetNormalizer from a NetClassificationConfig.
+
+        This factory method creates a fully configured NetNormalizer based on
+        the settings in a NetClassificationConfig object. It handles:
+        - Custom power/ground net names
+        - Custom regex patterns for power/ground
+        - The override_defaults flag
+
+        This is the preferred way to create a NetNormalizer when using
+        per-project configuration files.
+
+        Args:
+            config: Configuration object loaded from YAML or created programmatically.
+
+        Returns:
+            A new NetNormalizer configured according to the config.
+
+        Example:
+            >>> from ink.infrastructure.config.net_classification_config import (
+            ...     NetClassificationConfig,
+            ... )
+            >>> config = NetClassificationConfig.load(project_path)
+            >>> normalizer = NetNormalizer.from_config(config)
+            >>> # Now normalizer uses project-specific net classification
+        """
+        # Create normalizer with custom net names from config
+        normalizer = cls(
+            power_nets=config.power_names,
+            ground_nets=config.ground_names,
+        )
+
+        # Add custom patterns if provided
+        if config.power_patterns:
+            normalizer.add_power_patterns(config.power_patterns)
+        if config.ground_patterns:
+            normalizer.add_ground_patterns(config.ground_patterns)
+
+        # Handle override_defaults flag
+        if config.override_defaults:
+            normalizer.clear_default_patterns()
+
+        return normalizer
