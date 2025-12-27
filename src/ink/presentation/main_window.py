@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QCloseEvent, QGuiApplication
+from PySide6.QtGui import QAction, QCloseEvent, QGuiApplication, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QDockWidget,
     QFileDialog,
@@ -382,6 +382,115 @@ class InkMainWindow(QMainWindow):
         # Store reference for action additions in subsequent tasks
         # Tasks T02 and T03 will use this to add their actions
         self._toolbar = toolbar
+
+        # View Group (E06-F03-T02): Zoom and view controls
+        # Order: Zoom Out, Zoom In, Fit View (conventional order)
+        self._add_view_actions(self._toolbar)
+        self._toolbar.addSeparator()
+
+    def _add_view_actions(self, toolbar: QToolBar) -> None:
+        """Add view-related toolbar actions.
+
+        Creates three view control buttons in conventional order:
+        - Zoom Out: Decrease view scale (Ctrl+-)
+        - Zoom In: Increase view scale (Ctrl+=)
+        - Fit View: Fit all content in viewport (Ctrl+0)
+
+        All actions are always enabled. Handlers gracefully handle missing canvas
+        by checking for None/missing methods before calling canvas methods.
+
+        Args:
+            toolbar: QToolBar instance to add actions to.
+
+        Design Decisions:
+            - Button Order: Zoom Out → Zoom In → Fit View (industry convention)
+            - Tooltips: Include action name + keyboard shortcut in parentheses
+            - Shortcuts: Qt standard keys for zoom, custom Ctrl+0 for fit view
+            - No State Management: Actions always enabled (unlike undo/redo)
+
+        See Also:
+            - Spec E06-F03-T02 for view control tools requirements
+            - Pre-docs E06-F03-T02 for implementation details
+        """
+        # Zoom Out (decrease first, conventional order)
+        # Uses Qt standard ZoomOut shortcut (Ctrl+-) for platform consistency
+        zoom_out_action = QAction(
+            QIcon.fromTheme("zoom-out"),
+            "Zoom Out",
+            self,
+        )
+        zoom_out_action.setToolTip("Zoom out (Ctrl+-)")
+        zoom_out_action.setShortcut(QKeySequence.StandardKey.ZoomOut)
+        zoom_out_action.triggered.connect(self._on_zoom_out)
+        toolbar.addAction(zoom_out_action)
+
+        # Zoom In (increase second)
+        # Uses Qt standard ZoomIn shortcut (Ctrl+=) for platform consistency
+        zoom_in_action = QAction(
+            QIcon.fromTheme("zoom-in"),
+            "Zoom In",
+            self,
+        )
+        zoom_in_action.setToolTip("Zoom in (Ctrl+=)")
+        zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn)
+        zoom_in_action.triggered.connect(self._on_zoom_in)
+        toolbar.addAction(zoom_in_action)
+
+        # Fit View (special operation last)
+        # Uses custom Ctrl+0 shortcut (industry convention: Figma, CAD tools)
+        fit_view_action = QAction(
+            QIcon.fromTheme("zoom-fit-best"),
+            "Fit View",
+            self,
+        )
+        fit_view_action.setToolTip("Fit view to content (Ctrl+0)")
+        fit_view_action.setShortcut(QKeySequence("Ctrl+0"))
+        fit_view_action.triggered.connect(self._on_fit_view)
+        toolbar.addAction(fit_view_action)
+
+    def _on_zoom_in(self) -> None:
+        """Handle zoom in action.
+
+        Calls canvas.zoom_in() if canvas exists and has the method.
+        Gracefully handles missing canvas (no-op with no error).
+
+        Design Decision:
+            Uses hasattr() check first in case schematic_canvas was never set,
+            then checks canvas truthiness in case it was set to None.
+            Finally checks for method existence to support different canvas types.
+        """
+        if (
+            hasattr(self, "schematic_canvas")
+            and self.schematic_canvas
+            and hasattr(self.schematic_canvas, "zoom_in")
+        ):
+            self.schematic_canvas.zoom_in()
+
+    def _on_zoom_out(self) -> None:
+        """Handle zoom out action.
+
+        Calls canvas.zoom_out() if canvas exists and has the method.
+        Gracefully handles missing canvas (no-op with no error).
+        """
+        if (
+            hasattr(self, "schematic_canvas")
+            and self.schematic_canvas
+            and hasattr(self.schematic_canvas, "zoom_out")
+        ):
+            self.schematic_canvas.zoom_out()
+
+    def _on_fit_view(self) -> None:
+        """Handle fit view action.
+
+        Calls canvas.fit_view() if canvas exists and has the method.
+        Gracefully handles missing canvas (no-op with no error).
+        """
+        if (
+            hasattr(self, "schematic_canvas")
+            and self.schematic_canvas
+            and hasattr(self.schematic_canvas, "fit_view")
+        ):
+            self.schematic_canvas.fit_view()
 
     def _setup_menus(self) -> None:
         """Set up application menu bar with File, Edit, View, and Help menus.
