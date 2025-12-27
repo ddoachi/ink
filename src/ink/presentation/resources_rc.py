@@ -1,0 +1,242 @@
+# Resource object code (Python 3)
+# Created by: object code
+# Created by: The Resource Compiler for Qt version 6.10.1
+# WARNING! All changes made in this file will be lost!
+
+from PySide6 import QtCore
+
+qt_resource_data = b"\
+\x00\x00\x01/\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 width=\x2224\
+\x22 height=\x2224\x22 vi\
+ewBox=\x220 0 24 24\
+\x22 fill=\x22none\x22 st\
+roke=\x22currentCol\
+or\x22 stroke-width\
+=\x222\x22 stroke-line\
+cap=\x22round\x22 stro\
+ke-linejoin=\x22rou\
+nd\x22>\x0a  <!-- Undo\
+ arrow (Tabler I\
+cons style) -->\x0a\
+  <path d=\x22M9 14\
+l-4 -4l4 -4\x22/>\x0a \
+ <path d=\x22M5 10h\
+11a4 4 0 1 1 0 8\
+h-1\x22/>\x0a</svg>\x0a\
+\x00\x00\x011\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 width=\x2224\
+\x22 height=\x2224\x22 vi\
+ewBox=\x220 0 24 24\
+\x22 fill=\x22none\x22 st\
+roke=\x22currentCol\
+or\x22 stroke-width\
+=\x222\x22 stroke-line\
+cap=\x22round\x22 stro\
+ke-linejoin=\x22rou\
+nd\x22>\x0a  <!-- Redo\
+ arrow (Tabler I\
+cons style) -->\x0a\
+  <path d=\x22M15 1\
+4l4 -4l-4 -4\x22/>\x0a\
+  <path d=\x22M19 1\
+0h-11a4 4 0 1 0 \
+0 8h1\x22/>\x0a</svg>\x0a\
+\
+\x00\x00\x01\x94\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 width=\x2224\
+\x22 height=\x2224\x22 vi\
+ewBox=\x220 0 24 24\
+\x22 fill=\x22none\x22 st\
+roke=\x22currentCol\
+or\x22 stroke-width\
+=\x222\x22 stroke-line\
+cap=\x22round\x22 stro\
+ke-linejoin=\x22rou\
+nd\x22>\x0a  <!-- Fit \
+view / arrows ma\
+ximize (Tabler I\
+cons style) -->\x0a\
+  <path d=\x22M4 8v\
+-2a2 2 0 0 1 2 -\
+2h2\x22/>\x0a  <path d\
+=\x22M4 16v2a2 2 0 \
+0 0 2 2h2\x22/>\x0a  <\
+path d=\x22M16 4h2a\
+2 2 0 0 1 2 2v2\x22\
+/>\x0a  <path d=\x22M1\
+6 20h2a2 2 0 0 0\
+ 2 -2v-2\x22/>\x0a</sv\
+g>\x0a\
+\x00\x00\x01X\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 width=\x2224\
+\x22 height=\x2224\x22 vi\
+ewBox=\x220 0 24 24\
+\x22 fill=\x22none\x22 st\
+roke=\x22currentCol\
+or\x22 stroke-width\
+=\x222\x22 stroke-line\
+cap=\x22round\x22 stro\
+ke-linejoin=\x22rou\
+nd\x22>\x0a  <!-- Zoom\
+ in with plus (T\
+abler Icons styl\
+e) -->\x0a  <circle\
+ cx=\x2210\x22 cy=\x2210\x22\
+ r=\x227\x22/>\x0a  <path\
+ d=\x22M21 21l-6 -6\
+\x22/>\x0a  <path d=\x22M\
+7 10h6\x22/>\x0a  <pat\
+h d=\x22M10 7v6\x22/>\x0a\
+</svg>\x0a\
+\x00\x00\x01f\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 width=\x2224\
+\x22 height=\x2224\x22 vi\
+ewBox=\x220 0 24 24\
+\x22 fill=\x22none\x22 st\
+roke=\x22currentCol\
+or\x22 stroke-width\
+=\x222\x22 stroke-line\
+cap=\x22round\x22 stro\
+ke-linejoin=\x22rou\
+nd\x22>\x0a  <!-- Open\
+ Folder icon (Ta\
+bler Icons style\
+) -->\x0a  <path d=\
+\x22M5 4h4l3 3h7a2 \
+2 0 0 1 2 2v8a2 \
+2 0 0 1 -2 2h-14\
+a2 2 0 0 1 -2 -2\
+v-11a2 2 0 0 1 2\
+ -2\x22/>\x0a  <path d\
+=\x22M5 10h14\x22/>\x0a</\
+svg>\x0a\
+\x00\x00\x012\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 width=\x2224\
+\x22 height=\x2224\x22 vi\
+ewBox=\x220 0 24 24\
+\x22 fill=\x22none\x22 st\
+roke=\x22currentCol\
+or\x22 stroke-width\
+=\x222\x22 stroke-line\
+cap=\x22round\x22 stro\
+ke-linejoin=\x22rou\
+nd\x22>\x0a  <!-- Sear\
+ch/magnifying gl\
+ass (Tabler Icon\
+s style) -->\x0a  <\
+circle cx=\x2210\x22 c\
+y=\x2210\x22 r=\x227\x22/>\x0a \
+ <path d=\x22M21 21\
+l-6 -6\x22/>\x0a</svg>\
+\x0a\
+\x00\x00\x01D\
+<\
+svg xmlns=\x22http:\
+//www.w3.org/200\
+0/svg\x22 width=\x2224\
+\x22 height=\x2224\x22 vi\
+ewBox=\x220 0 24 24\
+\x22 fill=\x22none\x22 st\
+roke=\x22currentCol\
+or\x22 stroke-width\
+=\x222\x22 stroke-line\
+cap=\x22round\x22 stro\
+ke-linejoin=\x22rou\
+nd\x22>\x0a  <!-- Zoom\
+ out with minus \
+(Tabler Icons st\
+yle) -->\x0a  <circ\
+le cx=\x2210\x22 cy=\x221\
+0\x22 r=\x227\x22/>\x0a  <pa\
+th d=\x22M21 21l-6 \
+-6\x22/>\x0a  <path d=\
+\x22M7 10h6\x22/>\x0a</sv\
+g>\x0a\
+"
+
+qt_resource_name = b"\
+\x00\x05\
+\x00o\xa6S\
+\x00i\
+\x00c\x00o\x00n\x00s\
+\x00\x0d\
+\x03\xd2\xb3\xe7\
+\x00e\
+\x00d\x00i\x00t\x00-\x00u\x00n\x00d\x00o\x00.\x00s\x00v\x00g\
+\x00\x0d\
+\x0c\xd2\xb2g\
+\x00e\
+\x00d\x00i\x00t\x00-\x00r\x00e\x00d\x00o\x00.\x00s\x00v\x00g\
+\x00\x11\
+\x09\x02%\xc7\
+\x00z\
+\x00o\x00o\x00m\x00-\x00f\x00i\x00t\x00-\x00b\x00e\x00s\x00t\x00.\x00s\x00v\x00g\
+\
+\x00\x0b\
+\x03\x03\x96\xc7\
+\x00z\
+\x00o\x00o\x00m\x00-\x00i\x00n\x00.\x00s\x00v\x00g\
+\x00\x11\
+\x01\xa6\xc9\x07\
+\x00d\
+\x00o\x00c\x00u\x00m\x00e\x00n\x00t\x00-\x00o\x00p\x00e\x00n\x00.\x00s\x00v\x00g\
+\
+\x00\x0d\
+\x0b'\xbc\xe7\
+\x00e\
+\x00d\x00i\x00t\x00-\x00f\x00i\x00n\x00d\x00.\x00s\x00v\x00g\
+\x00\x0c\
+\x06\xeb\x9ag\
+\x00z\
+\x00o\x00o\x00m\x00-\x00o\x00u\x00t\x00.\x00s\x00v\x00g\
+"
+
+qt_resource_struct = b"\
+\x00\x00\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00\x01\
+\x00\x00\x00\x00\x00\x00\x00\x00\
+\x00\x00\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00\x02\
+\x00\x00\x00\x00\x00\x00\x00\x00\
+\x00\x00\x00\x00\x00\x02\x00\x00\x00\x07\x00\x00\x00\x03\
+\x00\x00\x00\x00\x00\x00\x00\x00\
+\x00\x00\x00\x94\x00\x00\x00\x00\x00\x01\x00\x00\x05\x5c\
+\x00\x00\x01\x9b^4\x93o\
+\x00\x00\x00x\x00\x00\x00\x00\x00\x01\x00\x00\x04\x00\
+\x00\x00\x01\x9b^4\x95.\
+\x00\x00\x00\x10\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\
+\x00\x00\x01\x9b^4\x93\xd3\
+\x00\x00\x00\xdc\x00\x00\x00\x00\x00\x01\x00\x00\x07\xfc\
+\x00\x00\x01\x9b^4\x95\xae\
+\x00\x00\x00P\x00\x00\x00\x00\x00\x01\x00\x00\x02h\
+\x00\x00\x01\x9b^4\x96D\
+\x00\x00\x00\xbc\x00\x00\x00\x00\x00\x01\x00\x00\x06\xc6\
+\x00\x00\x01\x9b^4\x94\xb3\
+\x00\x00\x000\x00\x00\x00\x00\x00\x01\x00\x00\x013\
+\x00\x00\x01\x9b^4\x94?\
+"
+
+def qInitResources():
+    QtCore.qRegisterResourceData(0x03, qt_resource_struct, qt_resource_name, qt_resource_data)
+
+def qCleanupResources():
+    QtCore.qUnregisterResourceData(0x03, qt_resource_struct, qt_resource_name, qt_resource_data)
+
+qInitResources()
