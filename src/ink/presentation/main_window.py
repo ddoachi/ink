@@ -136,6 +136,12 @@ class InkMainWindow(QMainWindow):
     message_dock: QDockWidget
     _toolbar: QToolBar
 
+    # Toolbar action type hints (E06-F03-T03)
+    _open_action: QAction
+    _undo_action: QAction
+    _redo_action: QAction
+    _search_action: QAction
+
     # Edit menu actions (E06-F02-T03)
     undo_action: QAction
     redo_action: QAction
@@ -411,10 +417,151 @@ class InkMainWindow(QMainWindow):
         # Tasks T02 and T03 will use this to add their actions
         self._toolbar = toolbar
 
-        # View Group (E06-F03-T02): Zoom and view controls
-        # Order: Zoom Out, Zoom In, Fit View (conventional order)
-        self._add_view_actions(self._toolbar)
-        self._toolbar.addSeparator()
+        # Add action groups with separators
+        # Group 1: File operations (E06-F03-T03)
+        self._add_file_actions(toolbar)
+        toolbar.addSeparator()
+
+        # Group 2: Edit operations - Undo/Redo (E06-F03-T03)
+        self._add_edit_actions(toolbar)
+        toolbar.addSeparator()
+
+        # Group 3: Search operations (E06-F03-T03)
+        self._add_search_actions(toolbar)
+        toolbar.addSeparator()
+
+        # Group 4: View operations - Zoom controls (E06-F03-T02)
+        self._add_view_actions(toolbar)
+        toolbar.addSeparator()
+
+    def _add_file_actions(self, toolbar: QToolBar) -> None:
+        """Add file-related toolbar actions.
+
+        Creates the Open button for loading netlist files. The Open action
+        is always enabled and triggers the file dialog.
+
+        Action Configuration:
+            - Icon: document-open (from system theme)
+            - Text: "Open"
+            - Shortcut: Ctrl+O (QKeySequence.StandardKey.Open)
+            - Tooltip: "Open netlist file (Ctrl+O)"
+            - Enabled: Always (users can open files at any time)
+
+        Args:
+            toolbar: The QToolBar to add actions to.
+
+        See Also:
+            - Spec E06-F03-T03 for file action requirements
+            - _on_open_file_dialog() for the file dialog handler
+        """
+        # Create Open action with system theme icon
+        # The document-open icon is standard across desktop environments
+        self._open_action = QAction(
+            QIcon.fromTheme("document-open"),
+            "Open",
+            self,
+        )
+
+        # Set tooltip with keyboard shortcut for discoverability
+        # Users hovering over the button will see this helpful hint
+        self._open_action.setToolTip("Open netlist file (Ctrl+O)")
+
+        # Use Qt's standard Open shortcut (Ctrl+O on most platforms)
+        # This ensures platform-appropriate behavior
+        self._open_action.setShortcut(QKeySequence.StandardKey.Open)
+
+        # Connect to the existing file dialog handler from E06-F02-T02
+        # This reuses the file opening infrastructure already in place
+        self._open_action.triggered.connect(self._on_open_file_dialog)
+
+        # Add to toolbar
+        toolbar.addAction(self._open_action)
+
+    def _add_edit_actions(self, toolbar: QToolBar) -> None:
+        """Add edit-related toolbar actions (Undo/Redo).
+
+        Creates Undo and Redo buttons for expansion/collapse operations.
+        Both actions are initially disabled and their state is managed by
+        _update_undo_redo_state() based on expansion service history.
+
+        Undo Action Configuration:
+            - Icon: edit-undo (from system theme)
+            - Text: "Undo"
+            - Shortcut: Ctrl+Z (QKeySequence.StandardKey.Undo)
+            - Tooltip: "Undo expansion/collapse (Ctrl+Z)"
+            - Enabled: Initially disabled, updated by service state
+
+        Redo Action Configuration:
+            - Icon: edit-redo (from system theme)
+            - Text: "Redo"
+            - Shortcut: Ctrl+Shift+Z (QKeySequence.StandardKey.Redo)
+            - Tooltip: "Redo expansion/collapse (Ctrl+Shift+Z)"
+            - Enabled: Initially disabled, updated by service state
+
+        Args:
+            toolbar: The QToolBar to add actions to.
+
+        See Also:
+            - Spec E06-F03-T03 for edit action requirements
+            - _on_undo() and _on_redo() for action handlers
+            - _update_undo_redo_state() for state management
+        """
+        # Create Undo action
+        self._undo_action = QAction(
+            QIcon.fromTheme("edit-undo"),
+            "Undo",
+            self,
+        )
+        self._undo_action.setToolTip("Undo expansion/collapse (Ctrl+Z)")
+        self._undo_action.setShortcut(QKeySequence.StandardKey.Undo)
+        # Initially disabled - no history at startup
+        self._undo_action.setEnabled(False)
+        self._undo_action.triggered.connect(self._on_undo)
+        toolbar.addAction(self._undo_action)
+
+        # Create Redo action
+        self._redo_action = QAction(
+            QIcon.fromTheme("edit-redo"),
+            "Redo",
+            self,
+        )
+        self._redo_action.setToolTip("Redo expansion/collapse (Ctrl+Shift+Z)")
+        self._redo_action.setShortcut(QKeySequence.StandardKey.Redo)
+        # Initially disabled - no redo history at startup
+        self._redo_action.setEnabled(False)
+        self._redo_action.triggered.connect(self._on_redo)
+        toolbar.addAction(self._redo_action)
+
+    def _add_search_actions(self, toolbar: QToolBar) -> None:
+        """Add search-related toolbar actions.
+
+        Creates the Search button for finding cells, nets, and pins.
+        The Search action is always enabled and shows/focuses the search panel.
+
+        Action Configuration:
+            - Icon: edit-find (from system theme)
+            - Text: "Search"
+            - Shortcut: Ctrl+F (QKeySequence.StandardKey.Find)
+            - Tooltip: "Search cells/nets/pins (Ctrl+F)"
+            - Enabled: Always (search is available anytime)
+
+        Args:
+            toolbar: The QToolBar to add actions to.
+
+        See Also:
+            - Spec E06-F03-T03 for search action requirements
+            - _on_find() for the search handler
+        """
+        # Create Search action
+        self._search_action = QAction(
+            QIcon.fromTheme("edit-find"),
+            "Search",
+            self,
+        )
+        self._search_action.setToolTip("Search cells/nets/pins (Ctrl+F)")
+        self._search_action.setShortcut(QKeySequence.StandardKey.Find)
+        self._search_action.triggered.connect(self._on_find)
+        toolbar.addAction(self._search_action)
 
     def _add_view_actions(self, toolbar: QToolBar) -> None:
         """Add view-related toolbar actions.
@@ -475,6 +622,124 @@ class InkMainWindow(QMainWindow):
         fit_view_action.setShortcut(QKeySequence("Ctrl+0"))
         fit_view_action.triggered.connect(self._on_fit_view)
         toolbar.addAction(fit_view_action)
+
+    def _on_undo(self) -> None:
+        """Handle Undo action from toolbar or keyboard shortcut.
+
+        Calls the expansion service's undo method if available, then updates
+        the undo/redo button states. Uses defensive programming to handle
+        the case where the expansion service is not yet initialized.
+
+        This allows the UI to be functional even before all services are
+        integrated (graceful degradation for MVP).
+
+        See Also:
+            - Spec E06-F03-T03 for undo requirements
+            - _update_undo_redo_state() for state management
+        """
+        # Defensive check for expansion service existence
+        # Service may not be initialized yet during early development
+        if hasattr(self, "_expansion_service") and self._expansion_service is not None:
+            self._expansion_service.undo()
+            self._update_undo_redo_state()
+
+    def _on_redo(self) -> None:
+        """Handle Redo action from toolbar or keyboard shortcut.
+
+        Calls the expansion service's redo method if available, then updates
+        the undo/redo button states. Uses defensive programming to handle
+        the case where the expansion service is not yet initialized.
+
+        This allows the UI to be functional even before all services are
+        integrated (graceful degradation for MVP).
+
+        See Also:
+            - Spec E06-F03-T03 for redo requirements
+            - _update_undo_redo_state() for state management
+        """
+        # Defensive check for expansion service existence
+        if hasattr(self, "_expansion_service") and self._expansion_service is not None:
+            self._expansion_service.redo()
+            self._update_undo_redo_state()
+
+    def _on_find(self) -> None:
+        """Handle Search action from toolbar or keyboard shortcut.
+
+        Shows the search panel if hidden, or focuses the search input if
+        the panel is already visible. Falls back to showing message_dock
+        as a placeholder when the full search panel is not yet implemented.
+
+        Behavior:
+            - Search panel available: Show/focus the search panel
+            - Search panel not available: Fall back to message_dock
+            - Neither available: Show status bar message
+
+        This design ensures users can quickly start searching without
+        having to manually navigate to the search panel.
+
+        See Also:
+            - Spec E06-F03-T03 for search panel requirements
+            - E06-F02-T03 for Edit menu Find action
+        """
+        # Check for dedicated search panel existence (E05 implementation)
+        if hasattr(self, "_search_panel") and self._search_panel is not None:
+            if self._search_panel.isVisible():
+                # Panel already visible - just focus the input
+                self._search_panel.focus_search_input()
+            else:
+                # Panel hidden - show it and focus input
+                self._search_panel.show()
+                self._search_panel.focus_search_input()
+        elif hasattr(self, "message_dock") and self.message_dock is not None:
+            # Fall back to message_dock as search panel placeholder (E06-F02-T03)
+            if not self.message_dock.isVisible():
+                self.message_dock.setVisible(True)
+            # Focus on search input field for immediate typing
+            if hasattr(self, "message_panel") and self.message_panel is not None:
+                self.message_panel.focus_search_input()
+        else:
+            # Neither search panel nor message dock available
+            self.statusBar().showMessage("Search panel not yet available", 3000)
+
+    def _update_undo_redo_state(self) -> None:
+        """Update Undo/Redo button enabled state based on expansion history.
+
+        Queries the expansion service for undo/redo availability and updates
+        both toolbar and menu action states accordingly. Uses defensive
+        programming to handle the case where the expansion service is not
+        initialized.
+
+        State Transitions:
+            - No history: Both disabled
+            - After expansion: Undo enabled, Redo disabled
+            - After undo: Undo disabled (if empty), Redo enabled
+            - After redo: Undo enabled, Redo disabled (if empty)
+
+        This method is called:
+            - After undo operation
+            - After redo operation
+            - After expansion/collapse (via signal connection when available)
+            - When design is loaded (to reset state)
+
+        See Also:
+            - Spec E06-F03-T03 for state management requirements
+        """
+        # Defensive check for expansion service existence
+        if hasattr(self, "_expansion_service") and self._expansion_service is not None:
+            # Query service for current state
+            can_undo = self._expansion_service.can_undo()
+            can_redo = self._expansion_service.can_redo()
+
+            # Update toolbar button states based on service response
+            self._undo_action.setEnabled(can_undo)
+            self._redo_action.setEnabled(can_redo)
+
+            # Update menu action states as well (E06-F02-T03)
+            if hasattr(self, "undo_action"):
+                self.undo_action.setEnabled(can_undo)
+            if hasattr(self, "redo_action"):
+                self.redo_action.setEnabled(can_redo)
+        # If no service, buttons remain in their current state (disabled by default)
 
     def _on_zoom_in(self) -> None:
         """Handle zoom in action.
@@ -1060,131 +1325,6 @@ class InkMainWindow(QMainWindow):
         """
         self.app_settings.clear_recent_files()
         self._update_recent_files_menu()
-
-    # =========================================================================
-    # Edit Menu Handlers (E06-F02-T03)
-    # =========================================================================
-    # These handlers implement the Edit menu actions:
-    # - Undo: Undo last expansion/collapse operation
-    # - Redo: Redo last undone operation
-    # - Find: Open search panel and focus input
-
-    def _on_undo(self) -> None:
-        """Handle Edit > Undo action.
-
-        Undoes the last expansion or collapse operation. Currently uses
-        placeholder logic that shows a status message - full integration
-        with ExpansionService will be implemented in E04-F03.
-
-        After performing undo, updates the Undo/Redo action states to
-        reflect the new history position.
-
-        See Also:
-            - E04-F03: ExpansionService integration for actual undo
-        """
-        # TODO: Integrate with ExpansionService undo command
-        # For now, just show status message as placeholder
-        self.statusBar().showMessage("Undo triggered", 2000)
-
-        # Update menu states after undo to reflect new history position
-        self._update_undo_redo_state()
-
-    def _on_redo(self) -> None:
-        """Handle Edit > Redo action.
-
-        Redoes the last undone operation. Currently uses placeholder logic
-        that shows a status message - full integration with ExpansionService
-        will be implemented in E04-F03.
-
-        After performing redo, updates the Undo/Redo action states to
-        reflect the new history position.
-
-        See Also:
-            - E04-F03: ExpansionService integration for actual redo
-        """
-        # TODO: Integrate with ExpansionService redo command
-        # For now, just show status message as placeholder
-        self.statusBar().showMessage("Redo triggered", 2000)
-
-        # Update menu states after redo to reflect new history position
-        self._update_undo_redo_state()
-
-    def _on_find(self) -> None:
-        """Handle Edit > Find action.
-
-        Opens the search panel (message dock) if hidden and focuses the
-        search input field for immediate typing. This provides quick access
-        to search functionality via Ctrl+F.
-
-        The message_dock serves as the search panel placeholder until the
-        full search panel is implemented in E05-F01.
-
-        Behavior:
-            1. If message dock is hidden, make it visible
-            2. Focus the search input field in the message panel
-
-        See Also:
-            - E05-F01: Full search panel implementation
-            - E04-F03: Message panel with search functionality
-        """
-        # Show the message dock if it's currently hidden
-        # The message dock will become the search panel in E05-F01
-        if not self.message_dock.isVisible():
-            self.message_dock.setVisible(True)
-
-        # Focus on search input field for immediate typing
-        # The message_panel provides focus_search_input() method
-        self.message_panel.focus_search_input()
-
-    def _update_undo_redo_state(self) -> None:
-        """Update enabled state of Undo/Redo actions based on history.
-
-        Queries the expansion history to determine if undo/redo operations
-        are available, then updates the menu actions accordingly.
-
-        Currently uses placeholder logic that keeps both actions disabled -
-        full integration with ExpansionService will be implemented in E04-F03.
-
-        This method should be called:
-            - After every expansion operation
-            - After every collapse operation
-            - After undo/redo operations
-            - After loading a new netlist (reset to disabled)
-
-        State Updates:
-            - Enables/disables Undo action based on history availability
-            - Enables/disables Redo action based on redo stack
-            - Updates action text to show what will be undone/redone
-              (e.g., "Undo Expand", "Redo Collapse")
-
-        See Also:
-            - E04-F03: ExpansionService integration for history queries
-        """
-        # TODO: Query ExpansionService for undo/redo availability
-        # For now, use placeholder logic - both actions stay disabled
-        # until ExpansionService is integrated in E04-F03
-        can_undo = False  # Replace with: expansion_service.can_undo()
-        can_redo = False  # Replace with: expansion_service.can_redo()
-
-        # Update action enabled states
-        self.undo_action.setEnabled(can_undo)
-        self.redo_action.setEnabled(can_redo)
-
-        # Update action text to show what will be undone/redone
-        # This provides context to the user about the operation
-        if can_undo:
-            # TODO: Get last action description from ExpansionService
-            # Example: "Undo Expand", "Undo Collapse"
-            self.undo_action.setText("&Undo Expand")  # Placeholder
-        else:
-            self.undo_action.setText("&Undo")
-
-        if can_redo:
-            # TODO: Get next action description from ExpansionService
-            # Example: "Redo Expand", "Redo Collapse"
-            self.redo_action.setText("&Redo Expand")  # Placeholder
-        else:
-            self.redo_action.setText("&Redo")
 
     def _setup_central_widget(self) -> None:
         """Create and configure the central schematic canvas.
