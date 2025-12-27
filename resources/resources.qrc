@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <!--
+    Qt Resource Collection for Ink Schematic Viewer.
+
+    This file defines embedded resources that are compiled into the application
+    via pyside6-rcc. The compiled Python module (resources_rc.py) must be imported
+    before any resource paths (:/prefix/path) can be used.
+
+    Compilation command:
+        pyside6-rcc resources/resources.qrc -o src/ink/presentation/resources_rc.py
+
+    Icon Resources:
+        All icons use currentColor for stroke/fill to adapt to system theme.
+        Icons are in SVG format for crisp rendering at any size.
+
+    See Also:
+        - Spec E06-F03-T04 for icon requirements
+        - resources/icons/README.md for icon sources and licenses
+    -->
+    <qresource prefix="icons">
+        <!-- File operations -->
+        <file>icons/document-open.svg</file>
+
+        <!-- Edit operations -->
+        <file>icons/edit-undo.svg</file>
+        <file>icons/edit-redo.svg</file>
+
+        <!-- Search -->
+        <file>icons/edit-find.svg</file>
+
+        <!-- View controls -->
+        <file>icons/zoom-in.svg</file>
+        <file>icons/zoom-out.svg</file>
+        <file>icons/zoom-fit-best.svg</file>
+    </qresource>
+</RCC>

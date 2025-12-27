@@ -86,6 +86,11 @@ module = [
 ]
 ignore_missing_imports = true
 
+# Ignore auto-generated Qt resource file
+[[tool.mypy.overrides]]
+module = "ink.presentation.resources_rc"
+ignore_errors = true
+
 # =============================================================================
 # PYRIGHT - Additional strict checking (used by VS Code Pylance)
 # =============================================================================
@@ -201,6 +206,8 @@ convention = "google"
 "tests/*" = ["D103", "ANN001", "ANN201", "PLR2004", "ARG001", "ARG002", "PLC0415"]
 # Settings classes legitimately need Any for dynamic value storage
 "**/app_settings.py" = ["ANN401"]
+# Auto-generated Qt resource file from pyside6-rcc - exclude from linting
+"**/resources_rc.py" = ["D", "ANN", "ALL"]
 
 # =============================================================================
 # PYTEST

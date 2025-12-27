@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QAction, QCloseEvent, QGuiApplication, QIcon, QKeySequence
+from PySide6.QtGui import QAction, QCloseEvent, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
     QDockWidget,
     QFileDialog,
@@ -48,6 +48,7 @@ from ink.infrastructure.persistence.panel_settings_store import PanelSettingsSto
 from ink.presentation.canvas import SchematicCanvas
 from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
 from ink.presentation.state import PanelStateManager
+from ink.presentation.utils.icon_provider import IconProvider
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -454,10 +455,10 @@ class InkMainWindow(QMainWindow):
             - Spec E06-F03-T03 for file action requirements
             - _on_open_file_dialog() for the file dialog handler
         """
-        # Create Open action with system theme icon
-        # The document-open icon is standard across desktop environments
+        # Create Open action with icon from IconProvider
+        # IconProvider tries system theme first, falls back to bundled SVG
         self._open_action = QAction(
-            QIcon.fromTheme("document-open"),
+            IconProvider.get_icon("document-open"),
             "Open",
             self,
         )
@@ -506,9 +507,9 @@ class InkMainWindow(QMainWindow):
             - _on_undo() and _on_redo() for action handlers
             - _update_undo_redo_state() for state management
         """
-        # Create Undo action
+        # Create Undo action with icon from IconProvider
         self._undo_action = QAction(
-            QIcon.fromTheme("edit-undo"),
+            IconProvider.get_icon("edit-undo"),
             "Undo",
             self,
         )
@@ -519,9 +520,9 @@ class InkMainWindow(QMainWindow):
         self._undo_action.triggered.connect(self._on_undo)
         toolbar.addAction(self._undo_action)
 
-        # Create Redo action
+        # Create Redo action with icon from IconProvider
         self._redo_action = QAction(
-            QIcon.fromTheme("edit-redo"),
+            IconProvider.get_icon("edit-redo"),
             "Redo",
             self,
         )
@@ -552,9 +553,9 @@ class InkMainWindow(QMainWindow):
             - Spec E06-F03-T03 for search action requirements
             - _on_find() for the search handler
         """
-        # Create Search action
+        # Create Search action with icon from IconProvider
         self._search_action = QAction(
-            QIcon.fromTheme("edit-find"),
+            IconProvider.get_icon("edit-find"),
             "Search",
             self,
         )
@@ -590,7 +591,7 @@ class InkMainWindow(QMainWindow):
         # Zoom Out (decrease first, conventional order)
         # Uses Qt standard ZoomOut shortcut (Ctrl+-) for platform consistency
         zoom_out_action = QAction(
-            QIcon.fromTheme("zoom-out"),
+            IconProvider.get_icon("zoom-out"),
             "Zoom Out",
             self,
         )
@@ -602,7 +603,7 @@ class InkMainWindow(QMainWindow):
         # Zoom In (increase second)
         # Uses Qt standard ZoomIn shortcut (Ctrl+=) for platform consistency
         zoom_in_action = QAction(
-            QIcon.fromTheme("zoom-in"),
+            IconProvider.get_icon("zoom-in"),
             "Zoom In",
             self,
         )
@@ -614,7 +615,7 @@ class InkMainWindow(QMainWindow):
         # Fit View (special operation last)
         # Uses custom Ctrl+0 shortcut (industry convention: Figma, CAD tools)
         fit_view_action = QAction(
-            QIcon.fromTheme("zoom-fit-best"),
+            IconProvider.get_icon("zoom-fit-best"),
             "Fit View",
             self,
         )
