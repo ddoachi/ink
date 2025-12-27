@@ -25,6 +25,7 @@ from unittest.mock import patch
 import pytest
 from PySide6.QtCore import QSettings
 from PySide6.QtGui import QCloseEvent
+from PySide6.QtWidgets import QMessageBox
 
 from ink.infrastructure.persistence.app_settings import AppSettings
 from ink.infrastructure.persistence.panel_settings_store import PanelSettingsStore
@@ -208,7 +209,11 @@ class TestMainWindowResetPanelLayout:
     def test_reset_panel_layout_clears_saved_state(
         self, qtbot: QtBot, app_settings: AppSettings, isolated_settings: Path
     ) -> None:
-        """Verify reset_panel_layout clears saved panel state."""
+        """Verify reset_panel_layout clears saved panel state.
+
+        Note: reset_panel_layout() now shows a confirmation dialog (E06-F05-T04),
+        so we mock QMessageBox.question to return Yes.
+        """
         window = InkMainWindow(app_settings)
         qtbot.addWidget(window)
 
@@ -217,10 +222,14 @@ class TestMainWindowResetPanelLayout:
         window.closeEvent(close_event)
         assert window.panel_settings_store.has_saved_settings() is True
 
-        # Create new window and reset
+        # Create new window and reset (mock the confirmation dialog)
         window2 = InkMainWindow(app_settings)
         qtbot.addWidget(window2)
-        window2.reset_panel_layout()
+
+        with patch.object(
+            QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes
+        ):
+            window2.reset_panel_layout()
 
         # Saved state should be cleared
         assert window2.panel_settings_store.has_saved_settings() is False
