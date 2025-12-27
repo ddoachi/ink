@@ -10,7 +10,7 @@ from collections.abc import Iterable
 
 import pytest
 
-from ink.domain.value_objects.net import NetInfo, NetType
+from ink.domain.value_objects.net import NetType
 from ink.infrastructure.parsing.net_normalizer import NetNormalizer
 
 
