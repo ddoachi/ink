@@ -1,1 +1,1 @@
-"""Unit tests for CDL parsing infrastructure."""
+"""Unit tests for infrastructure parsing modules."""

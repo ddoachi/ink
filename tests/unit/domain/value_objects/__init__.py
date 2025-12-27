@@ -1,1 +1,1 @@
-# Value objects unit tests
+"""Unit tests for domain value objects."""

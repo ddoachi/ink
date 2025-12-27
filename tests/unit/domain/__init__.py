@@ -1,1 +1,1 @@
-# Domain layer unit tests
+"""Unit tests for domain layer."""
