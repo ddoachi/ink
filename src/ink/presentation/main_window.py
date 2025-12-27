@@ -44,11 +44,14 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
+from ink.infrastructure.persistence.panel_settings_store import PanelSettingsStore
 from ink.presentation.canvas import SchematicCanvas
 from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
 from ink.presentation.state import PanelStateManager
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from ink.infrastructure.persistence.app_settings import AppSettings
 
 
@@ -117,7 +120,14 @@ class InkMainWindow(QMainWindow):
     view_menu: QMenu
     help_menu: QMenu
     recent_files_menu: QMenu
+    # Panels submenu and toggle actions (E06-F05-T03)
+    panels_menu: QMenu
+    hierarchy_toggle_action: QAction
+    property_toggle_action: QAction
+    message_toggle_action: QAction
+    reset_panel_layout_action: QAction
     panel_state_manager: PanelStateManager
+    panel_settings_store: PanelSettingsStore
     hierarchy_panel: HierarchyPanel
     hierarchy_dock: QDockWidget
     property_panel: PropertyPanel
@@ -125,6 +135,11 @@ class InkMainWindow(QMainWindow):
     message_panel: MessagePanel
     message_dock: QDockWidget
     _toolbar: QToolBar
+
+    # Edit menu actions (E06-F02-T03)
+    undo_action: QAction
+    redo_action: QAction
+    find_action: QAction
 
     # Status bar widget type hints (E06-F04-T01)
     file_label: QLabel
@@ -178,6 +193,11 @@ class InkMainWindow(QMainWindow):
         # This is injected rather than created here for testability
         self.app_settings = app_settings
 
+        # Create panel settings store for panel layout persistence (E06-F05-T02)
+        # This must be created before dock widgets are set up, as it's used
+        # during panel state restoration
+        self.panel_settings_store = PanelSettingsStore()
+
         # Setup UI components BEFORE restoring geometry
         # restoreState() requires dock widgets to exist first
         self._setup_window()
@@ -189,6 +209,10 @@ class InkMainWindow(QMainWindow):
 
         # Restore geometry AFTER all widgets are created
         self._restore_geometry()
+
+        # Restore panel layout from saved state (E06-F05-T02)
+        # This is called after dock widgets are created and registered
+        self._restore_panel_layout()
 
         # Initialize recent files menu with current list
         self._update_recent_files_menu()
@@ -586,30 +610,250 @@ class InkMainWindow(QMainWindow):
     def _create_edit_menu(self) -> None:
         """Create Edit menu items.
 
-        Currently a stub - will be populated by E06-F02-T03 with:
-        - Undo/Redo actions
-        - Selection actions
-        - Copy/Paste operations
+        Populates the Edit menu with:
+        - Undo (Ctrl+Z): Undo last expansion/collapse operation
+        - Redo (Ctrl+Shift+Z): Redo last undone operation
+        - Find... (Ctrl+F): Open search panel and focus input
+
+        Undo/Redo actions are initially disabled and will be enabled when
+        expansion/collapse operations create history. The action text updates
+        dynamically to show what will be undone/redone.
+
+        Design Decisions:
+            - Uses Qt StandardKey shortcuts for cross-platform compatibility
+            - Undo/Redo initially disabled to indicate no history available
+            - Find always enabled as search is always available
+            - Status tips provide context for status bar display
 
         See Also:
             - E06-F02-T03: Edit menu actions implementation
+            - E04-F03: Undo/Redo integration with ExpansionService
+            - E05-F01: Search panel focus method
         """
-        # Stub: Edit menu items will be added by E06-F02-T03
-        pass
+        # =====================================================================
+        # Undo Action (Ctrl+Z)
+        # Undoes the last expansion or collapse operation. Initially disabled
+        # until the user performs an operation that can be undone.
+        # =====================================================================
+        self.undo_action = QAction("&Undo", self)
+        self.undo_action.setShortcut(QKeySequence.StandardKey.Undo)
+        self.undo_action.setStatusTip("Undo last expansion/collapse operation")
+        self.undo_action.setEnabled(False)  # Initially disabled - no history
+        self.undo_action.triggered.connect(self._on_undo)
+        self.edit_menu.addAction(self.undo_action)
+
+        # =====================================================================
+        # Redo Action (Ctrl+Shift+Z)
+        # Redoes the last undone operation. Initially disabled until the user
+        # performs an undo operation.
+        # =====================================================================
+        self.redo_action = QAction("&Redo", self)
+        self.redo_action.setShortcut(QKeySequence.StandardKey.Redo)
+        self.redo_action.setStatusTip("Redo last undone operation")
+        self.redo_action.setEnabled(False)  # Initially disabled - no history
+        self.redo_action.triggered.connect(self._on_redo)
+        self.edit_menu.addAction(self.redo_action)
+
+        # Separator between Undo/Redo and Find
+        self.edit_menu.addSeparator()
+
+        # =====================================================================
+        # Find Action (Ctrl+F)
+        # Opens the search panel (message dock) and focuses the search input.
+        # Always enabled as search functionality is always available.
+        # =====================================================================
+        self.find_action = QAction("&Find...", self)
+        self.find_action.setShortcut(QKeySequence.StandardKey.Find)
+        self.find_action.setStatusTip("Search for cells, nets, or ports")
+        self.find_action.triggered.connect(self._on_find)
+        self.edit_menu.addAction(self.find_action)
 
     def _create_view_menu(self) -> None:
-        """Create View menu items.
+        """Create View menu items with panel toggle actions.
 
-        Currently a stub - will be populated by E06-F02-T04 with:
-        - Zoom controls
-        - Panel visibility toggles
-        - Layout options
+        Populates the View menu with:
+        - Panels submenu for panel visibility toggles
+        - Panel toggle actions using Qt's toggleViewAction()
+        - Reset Panel Layout action
+
+        Panel Toggle Actions:
+            Uses Qt's built-in toggleViewAction() from QDockWidget which provides:
+            - Automatic checkable state (shows checkmark when visible)
+            - Bidirectional sync (menu ↔ panel visibility)
+            - Action text matches dock widget window title
+            - No manual signal handling needed
+
+        Keyboard Shortcuts:
+            - Ctrl+Shift+H: Toggle Hierarchy panel
+            - Ctrl+Shift+P: Toggle Properties panel
+            - Ctrl+Shift+M: Toggle Messages panel
+            - Ctrl+Shift+R: Reset panel layout
+
+        Design Decisions:
+            - Use Ctrl+Shift instead of Ctrl to avoid conflicts with standard shortcuts
+            - First letter of panel name for easy memorization
+            - Reset Layout at bottom with separator for visual grouping
 
         See Also:
-            - E06-F02-T04: View and Help menu actions implementation
+            - Spec E06-F05-T03 for panel toggle actions requirements
+            - E06-F05-T01: PanelStateManager integration
         """
-        # Stub: View menu items will be added by E06-F02-T04
-        pass
+        # Create Panels submenu for panel visibility toggles
+        # Using mnemonic &Panels for Alt+P keyboard access
+        self.panels_menu = self.view_menu.addMenu("&Panels")
+
+        # Get toggle actions from dock widgets
+        # Qt's toggleViewAction() provides automatic state synchronization:
+        # - Checkmark appears when panel is visible
+        # - Clicking toggles panel visibility
+        # - State syncs when panel is closed via X button
+        self._setup_panel_toggle_actions()
+
+        # Add separator before Reset Layout for visual grouping
+        self.panels_menu.addSeparator()
+
+        # Add Reset Panel Layout action
+        self._setup_reset_panel_layout_action()
+
+    def _setup_panel_toggle_actions(self) -> None:
+        """Set up toggle actions for each panel dock widget.
+
+        Creates checkable toggle actions using Qt's toggleViewAction() API.
+        Each action is configured with:
+        - Keyboard shortcut (Ctrl+Shift+<key>)
+        - Tooltip describing the action
+        - Status tip with shortcut hint for status bar display
+
+        The actions are added to the Panels submenu and stored as instance
+        attributes for programmatic access.
+
+        Note:
+            toggleViewAction() must be called after dock widgets are created.
+            The action text is automatically set to the dock widget's windowTitle.
+        """
+        # Hierarchy panel toggle action
+        # Uses dock widget's toggleViewAction() for automatic state sync
+        self.hierarchy_toggle_action = self.hierarchy_dock.toggleViewAction()
+        self.hierarchy_toggle_action.setShortcut("Ctrl+Shift+H")
+        self.hierarchy_toggle_action.setToolTip(
+            "Show or hide the hierarchy navigation panel"
+        )
+        self.hierarchy_toggle_action.setStatusTip(
+            "Toggle hierarchy panel visibility (Ctrl+Shift+H)"
+        )
+        self.panels_menu.addAction(self.hierarchy_toggle_action)
+
+        # Properties panel toggle action
+        self.property_toggle_action = self.property_dock.toggleViewAction()
+        self.property_toggle_action.setShortcut("Ctrl+Shift+P")
+        self.property_toggle_action.setToolTip(
+            "Show or hide the property inspector panel"
+        )
+        self.property_toggle_action.setStatusTip(
+            "Toggle property panel visibility (Ctrl+Shift+P)"
+        )
+        self.panels_menu.addAction(self.property_toggle_action)
+
+        # Messages panel toggle action
+        self.message_toggle_action = self.message_dock.toggleViewAction()
+        self.message_toggle_action.setShortcut("Ctrl+Shift+M")
+        self.message_toggle_action.setToolTip(
+            "Show or hide the message log panel"
+        )
+        self.message_toggle_action.setStatusTip(
+            "Toggle message panel visibility (Ctrl+Shift+M)"
+        )
+        self.panels_menu.addAction(self.message_toggle_action)
+
+        # Connect additional behavior for raising panels when shown
+        self._connect_panel_raise_behavior()
+
+    def _connect_panel_raise_behavior(self) -> None:
+        """Connect signals to raise panels when toggled to visible.
+
+        When a panel is toggled on via the menu action, it should be raised
+        (brought to front) to ensure the user sees the result of their action.
+        This is especially important when panels are tabbed together.
+
+        Note:
+            The triggered signal is emitted when the action is activated.
+            We check if the panel is now visible and raise it if so.
+        """
+        # Helper function to raise panel when toggled on
+        def make_raise_handler(dock_widget: QDockWidget) -> Callable[[bool], None]:
+            """Create a handler that raises the dock widget if visible.
+
+            Args:
+                dock_widget: The dock widget to potentially raise.
+
+            Returns:
+                Handler function for the triggered signal.
+            """
+            def handler(checked: bool) -> None:
+                # If action was checked (panel shown), raise to front
+                if checked:
+                    dock_widget.raise_()
+            return handler
+
+        # Connect raise handlers to toggle actions
+        self.hierarchy_toggle_action.triggered.connect(
+            make_raise_handler(self.hierarchy_dock)
+        )
+        self.property_toggle_action.triggered.connect(
+            make_raise_handler(self.property_dock)
+        )
+        self.message_toggle_action.triggered.connect(
+            make_raise_handler(self.message_dock)
+        )
+
+    def _setup_reset_panel_layout_action(self) -> None:
+        """Create and configure Reset Panel Layout action.
+
+        This action restores panels to their default layout:
+        - Hierarchy on left
+        - Properties on right
+        - Messages on bottom
+        - All panels visible
+
+        The action is added to the Panels submenu with a keyboard shortcut.
+        """
+        self.reset_panel_layout_action = QAction("&Reset Panel Layout", self)
+        self.reset_panel_layout_action.setShortcut("Ctrl+Shift+R")
+        self.reset_panel_layout_action.setToolTip(
+            "Reset panels to default layout"
+        )
+        self.reset_panel_layout_action.setStatusTip(
+            "Reset panel layout to defaults (Ctrl+Shift+R)"
+        )
+        self.reset_panel_layout_action.triggered.connect(self._reset_panel_layout)
+        self.panels_menu.addAction(self.reset_panel_layout_action)
+
+    def _reset_panel_layout(self) -> None:
+        """Reset panels to default layout.
+
+        Restores the default panel configuration:
+        - Hierarchy dock: Left area, visible
+        - Property dock: Right area, visible
+        - Message dock: Bottom area, visible
+        - All panels undocked (not floating)
+
+        This provides a quick way to restore a familiar layout if the user
+        has accidentally misconfigured their panels or wants to start fresh.
+        """
+        # Restore hierarchy dock to left area
+        self.hierarchy_dock.setFloating(False)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.hierarchy_dock)
+        self.hierarchy_dock.show()
+
+        # Restore property dock to right area
+        self.property_dock.setFloating(False)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.property_dock)
+        self.property_dock.show()
+
+        # Restore message dock to bottom area
+        self.message_dock.setFloating(False)
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.message_dock)
+        self.message_dock.show()
 
     def _create_help_menu(self) -> None:
         """Create Help menu items.
@@ -812,6 +1056,131 @@ class InkMainWindow(QMainWindow):
         """
         self.app_settings.clear_recent_files()
         self._update_recent_files_menu()
+
+    # =========================================================================
+    # Edit Menu Handlers (E06-F02-T03)
+    # =========================================================================
+    # These handlers implement the Edit menu actions:
+    # - Undo: Undo last expansion/collapse operation
+    # - Redo: Redo last undone operation
+    # - Find: Open search panel and focus input
+
+    def _on_undo(self) -> None:
+        """Handle Edit > Undo action.
+
+        Undoes the last expansion or collapse operation. Currently uses
+        placeholder logic that shows a status message - full integration
+        with ExpansionService will be implemented in E04-F03.
+
+        After performing undo, updates the Undo/Redo action states to
+        reflect the new history position.
+
+        See Also:
+            - E04-F03: ExpansionService integration for actual undo
+        """
+        # TODO: Integrate with ExpansionService undo command
+        # For now, just show status message as placeholder
+        self.statusBar().showMessage("Undo triggered", 2000)
+
+        # Update menu states after undo to reflect new history position
+        self._update_undo_redo_state()
+
+    def _on_redo(self) -> None:
+        """Handle Edit > Redo action.
+
+        Redoes the last undone operation. Currently uses placeholder logic
+        that shows a status message - full integration with ExpansionService
+        will be implemented in E04-F03.
+
+        After performing redo, updates the Undo/Redo action states to
+        reflect the new history position.
+
+        See Also:
+            - E04-F03: ExpansionService integration for actual redo
+        """
+        # TODO: Integrate with ExpansionService redo command
+        # For now, just show status message as placeholder
+        self.statusBar().showMessage("Redo triggered", 2000)
+
+        # Update menu states after redo to reflect new history position
+        self._update_undo_redo_state()
+
+    def _on_find(self) -> None:
+        """Handle Edit > Find action.
+
+        Opens the search panel (message dock) if hidden and focuses the
+        search input field for immediate typing. This provides quick access
+        to search functionality via Ctrl+F.
+
+        The message_dock serves as the search panel placeholder until the
+        full search panel is implemented in E05-F01.
+
+        Behavior:
+            1. If message dock is hidden, make it visible
+            2. Focus the search input field in the message panel
+
+        See Also:
+            - E05-F01: Full search panel implementation
+            - E04-F03: Message panel with search functionality
+        """
+        # Show the message dock if it's currently hidden
+        # The message dock will become the search panel in E05-F01
+        if not self.message_dock.isVisible():
+            self.message_dock.setVisible(True)
+
+        # Focus on search input field for immediate typing
+        # The message_panel provides focus_search_input() method
+        self.message_panel.focus_search_input()
+
+    def _update_undo_redo_state(self) -> None:
+        """Update enabled state of Undo/Redo actions based on history.
+
+        Queries the expansion history to determine if undo/redo operations
+        are available, then updates the menu actions accordingly.
+
+        Currently uses placeholder logic that keeps both actions disabled -
+        full integration with ExpansionService will be implemented in E04-F03.
+
+        This method should be called:
+            - After every expansion operation
+            - After every collapse operation
+            - After undo/redo operations
+            - After loading a new netlist (reset to disabled)
+
+        State Updates:
+            - Enables/disables Undo action based on history availability
+            - Enables/disables Redo action based on redo stack
+            - Updates action text to show what will be undone/redone
+              (e.g., "Undo Expand", "Redo Collapse")
+
+        See Also:
+            - E04-F03: ExpansionService integration for history queries
+        """
+        # TODO: Query ExpansionService for undo/redo availability
+        # For now, use placeholder logic - both actions stay disabled
+        # until ExpansionService is integrated in E04-F03
+        can_undo = False  # Replace with: expansion_service.can_undo()
+        can_redo = False  # Replace with: expansion_service.can_redo()
+
+        # Update action enabled states
+        self.undo_action.setEnabled(can_undo)
+        self.redo_action.setEnabled(can_redo)
+
+        # Update action text to show what will be undone/redone
+        # This provides context to the user about the operation
+        if can_undo:
+            # TODO: Get last action description from ExpansionService
+            # Example: "Undo Expand", "Undo Collapse"
+            self.undo_action.setText("&Undo Expand")  # Placeholder
+        else:
+            self.undo_action.setText("&Undo")
+
+        if can_redo:
+            # TODO: Get next action description from ExpansionService
+            # Example: "Redo Expand", "Redo Collapse"
+            self.redo_action.setText("&Redo Expand")  # Placeholder
+        else:
+            self.redo_action.setText("&Redo")
 
     def _setup_central_widget(self) -> None:
         """Create and configure the central schematic canvas.
@@ -1138,6 +1507,78 @@ class InkMainWindow(QMainWindow):
         return separator
 
     # =========================================================================
+    # Selection Status Display (E06-F04-T02)
+    # =========================================================================
+    # These methods handle selection count display in the status bar.
+    # The selection_label widget is updated when objects are selected/deselected.
+
+    def update_selection_status(self, count: int) -> None:
+        """Update selection count in status bar.
+
+        Updates the selection_label widget to display the current number
+        of selected objects in the format "Selected: N".
+
+        This method is called:
+            - When selection changes via user interaction
+            - When selection service emits selection_changed signal
+            - When selection is cleared (count=0)
+
+        Args:
+            count: Number of currently selected objects. Should be non-negative.
+
+        Example:
+            >>> window.update_selection_status(0)    # "Selected: 0"
+            >>> window.update_selection_status(1)    # "Selected: 1"
+            >>> window.update_selection_status(42)   # "Selected: 42"
+
+        Note:
+            For performance, this method directly updates the label text
+            without additional validation. The count is trusted to come
+            from the selection service which manages the selection state.
+
+        See Also:
+            - E06-F04-T02: Selection status display specification
+            - E04-F01: Selection service (emits selection_changed signal)
+        """
+        self.selection_label.setText(f"Selected: {count}")
+
+    def _connect_status_signals(self) -> None:
+        """Connect signals to status bar update methods.
+
+        Establishes signal-slot connections between application services
+        and status bar update methods. Currently handles:
+            - selection_service.selection_changed → update_selection_status
+
+        This method is called during initialization to set up reactive updates.
+        It handles the case where services may not yet be initialized by
+        checking for attribute existence before attempting connection.
+
+        Connection Strategy:
+            - Check if service attribute exists (hasattr)
+            - Check if service has the expected signal (hasattr on signal)
+            - Connect signal to lambda that extracts count from items list
+
+        Design Decisions:
+            - Lambda wrapper: Allows extracting len(items) from signal
+            - Defensive checks: Prevents AttributeError during initialization
+            - No error on missing service: Graceful degradation when services
+              are not yet set up (can be reconnected later)
+
+        See Also:
+            - E06-F04-T02: Selection status display specification
+            - E04-F01: Selection service (provides selection_changed signal)
+        """
+        # Connect selection service signal if service is available
+        # The selection service emits selection_changed with a list of selected items
+        if hasattr(self, "selection_service"):
+            service = self.selection_service
+            # Verify the service has the expected signal before connecting
+            if hasattr(service, "selection_changed"):
+                service.selection_changed.connect(
+                    lambda items: self.update_selection_status(len(items))
+                )
+
+    # =========================================================================
     # Window Geometry Persistence (E06-F06-T02)
     # =========================================================================
     # These methods handle saving and restoring window geometry and state.
@@ -1226,7 +1667,7 @@ class InkMainWindow(QMainWindow):
         self.app_settings.sync()
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        """Handle window close event - save geometry and state.
+        """Handle window close event - save geometry, state, and panel layout.
 
         This method is called by Qt when the user closes the window.
         It saves the current window layout before allowing the close.
@@ -1234,12 +1675,91 @@ class InkMainWindow(QMainWindow):
         Args:
             event: The close event from Qt. Call accept() to close,
                    ignore() to prevent closing.
+
+        Persistence order:
+            1. Save window geometry (size, position)
+            2. Save panel layout (dock visibility, areas, Qt state)
         """
         # Save geometry before closing
         self._save_geometry()
 
+        # Save panel layout (E06-F05-T02)
+        self._save_panel_layout()
+
         # Accept the close event - window will close
         event.accept()
+
+    # =========================================================================
+    # Panel Layout Persistence (E06-F05-T02)
+    # =========================================================================
+    # These methods handle saving and restoring panel layout state.
+    # They integrate with PanelSettingsStore for complete dock widget persistence.
+
+    def _restore_panel_layout(self) -> None:
+        """Restore panel layout from saved settings.
+
+        This method is called during initialization (after dock widgets are
+        created and registered with PanelStateManager) to restore the panel
+        layout from the previous session.
+
+        Restoration includes:
+        - Qt state blobs (dock positions, sizes, tabbing)
+        - Individual panel visibility
+        - Floating panel positions
+
+        If no saved state exists (first run), panels remain in their default
+        positions as set during dock widget creation.
+
+        See Also:
+            - _save_panel_layout: Saves state on window close
+            - reset_panel_layout: Clears saved state for defaults
+        """
+        # Load saved panel state
+        saved_state = self.panel_settings_store.load_panel_state()
+
+        if saved_state is not None:
+            # Use PanelStateManager to restore the state
+            # This handles Qt blob restoration and individual visibility
+            self.panel_state_manager.restore_state(saved_state)
+
+    def _save_panel_layout(self) -> None:
+        """Save current panel layout to settings.
+
+        This method is called from closeEvent() to persist the panel
+        layout before the application exits.
+
+        Saves:
+        - Qt state blobs (complete dock layout from saveState())
+        - Individual panel metadata (visibility, area, geometry)
+
+        The PanelStateManager.capture_state() method is used to collect
+        all panel state including Qt's native state blobs.
+
+        See Also:
+            - _restore_panel_layout: Restores state on startup
+            - PanelStateManager.capture_state: Collects panel state
+        """
+        # Capture current panel state via PanelStateManager
+        current_state = self.panel_state_manager.capture_state()
+
+        # Save to persistent storage
+        self.panel_settings_store.save_panel_state(current_state)
+
+    def reset_panel_layout(self) -> None:
+        """Clear saved panel layout (reset to defaults).
+
+        Removes all saved panel settings, causing the next application
+        startup to use default panel positions and visibility.
+
+        This method can be called from:
+        - Help > Settings > Reset Panel Layout menu action
+        - Programmatically when debugging layout issues
+
+        Post-reset behavior:
+            - Next startup will use default panel layout
+            - Current session layout is NOT affected (restart required)
+        """
+        self.panel_settings_store.clear_panel_state()
 
     # =========================================================================
     # Settings Menu Action Handlers (E06-F06-T04)
