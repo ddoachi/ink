@@ -27,8 +27,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 from PySide6.QtCore import QSettings
-from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import QDialog, QMenu
+from PySide6.QtGui import QKeySequence
+from PySide6.QtWidgets import QDialog
 
 from ink.infrastructure.persistence.app_settings import AppSettings
 from ink.presentation.main_window import InkMainWindow
@@ -467,9 +467,9 @@ class TestHelpMenuKeyboardShortcuts:
         assert shortcuts_action is not None
 
         # We need to mock the dialog to prevent blocking
-        # The import happens inside _on_show_shortcuts, so we mock it there
+        # Mock where it's imported (main_window), not where it's defined
         with patch(
-            "ink.presentation.dialogs.shortcuts_dialog.KeyboardShortcutsDialog"
+            "ink.presentation.main_window.KeyboardShortcutsDialog"
         ) as MockDialog:
             mock_dialog = Mock()
             MockDialog.return_value = mock_dialog
