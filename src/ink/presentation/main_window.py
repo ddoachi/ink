@@ -44,6 +44,7 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
+from ink.infrastructure.persistence.panel_settings_store import PanelSettingsStore
 from ink.presentation.canvas import SchematicCanvas
 from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
 from ink.presentation.state import PanelStateManager
@@ -118,6 +119,7 @@ class InkMainWindow(QMainWindow):
     help_menu: QMenu
     recent_files_menu: QMenu
     panel_state_manager: PanelStateManager
+    panel_settings_store: PanelSettingsStore
     hierarchy_panel: HierarchyPanel
     hierarchy_dock: QDockWidget
     property_panel: PropertyPanel
@@ -183,6 +185,11 @@ class InkMainWindow(QMainWindow):
         # This is injected rather than created here for testability
         self.app_settings = app_settings
 
+        # Create panel settings store for panel layout persistence (E06-F05-T02)
+        # This must be created before dock widgets are set up, as it's used
+        # during panel state restoration
+        self.panel_settings_store = PanelSettingsStore()
+
         # Setup UI components BEFORE restoring geometry
         # restoreState() requires dock widgets to exist first
         self._setup_window()
@@ -194,6 +201,10 @@ class InkMainWindow(QMainWindow):
 
         # Restore geometry AFTER all widgets are created
         self._restore_geometry()
+
+        # Restore panel layout from saved state (E06-F05-T02)
+        # This is called after dock widgets are created and registered
+        self._restore_panel_layout()
 
         # Initialize recent files menu with current list
         self._update_recent_files_menu()
@@ -1366,7 +1377,7 @@ class InkMainWindow(QMainWindow):
         self.app_settings.sync()
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        """Handle window close event - save geometry and state.
+        """Handle window close event - save geometry, state, and panel layout.
 
         This method is called by Qt when the user closes the window.
         It saves the current window layout before allowing the close.
@@ -1374,12 +1385,91 @@ class InkMainWindow(QMainWindow):
         Args:
             event: The close event from Qt. Call accept() to close,
                    ignore() to prevent closing.
+
+        Persistence order:
+            1. Save window geometry (size, position)
+            2. Save panel layout (dock visibility, areas, Qt state)
         """
         # Save geometry before closing
         self._save_geometry()
 
+        # Save panel layout (E06-F05-T02)
+        self._save_panel_layout()
+
         # Accept the close event - window will close
         event.accept()
+
+    # =========================================================================
+    # Panel Layout Persistence (E06-F05-T02)
+    # =========================================================================
+    # These methods handle saving and restoring panel layout state.
+    # They integrate with PanelSettingsStore for complete dock widget persistence.
+
+    def _restore_panel_layout(self) -> None:
+        """Restore panel layout from saved settings.
+
+        This method is called during initialization (after dock widgets are
+        created and registered with PanelStateManager) to restore the panel
+        layout from the previous session.
+
+        Restoration includes:
+        - Qt state blobs (dock positions, sizes, tabbing)
+        - Individual panel visibility
+        - Floating panel positions
+
+        If no saved state exists (first run), panels remain in their default
+        positions as set during dock widget creation.
+
+        See Also:
+            - _save_panel_layout: Saves state on window close
+            - reset_panel_layout: Clears saved state for defaults
+        """
+        # Load saved panel state
+        saved_state = self.panel_settings_store.load_panel_state()
+
+        if saved_state is not None:
+            # Use PanelStateManager to restore the state
+            # This handles Qt blob restoration and individual visibility
+            self.panel_state_manager.restore_state(saved_state)
+
+    def _save_panel_layout(self) -> None:
+        """Save current panel layout to settings.
+
+        This method is called from closeEvent() to persist the panel
+        layout before the application exits.
+
+        Saves:
+        - Qt state blobs (complete dock layout from saveState())
+        - Individual panel metadata (visibility, area, geometry)
+
+        The PanelStateManager.capture_state() method is used to collect
+        all panel state including Qt's native state blobs.
+
+        See Also:
+            - _restore_panel_layout: Restores state on startup
+            - PanelStateManager.capture_state: Collects panel state
+        """
+        # Capture current panel state via PanelStateManager
+        current_state = self.panel_state_manager.capture_state()
+
+        # Save to persistent storage
+        self.panel_settings_store.save_panel_state(current_state)
+
+    def reset_panel_layout(self) -> None:
+        """Clear saved panel layout (reset to defaults).
+
+        Removes all saved panel settings, causing the next application
+        startup to use default panel positions and visibility.
+
+        This method can be called from:
+        - Help > Settings > Reset Panel Layout menu action
+        - Programmatically when debugging layout issues
+
+        Post-reset behavior:
+            - Next startup will use default panel layout
+            - Current session layout is NOT affected (restart required)
+        """
+        self.panel_settings_store.clear_panel_state()
 
     # =========================================================================
     # Settings Menu Action Handlers (E06-F06-T04)

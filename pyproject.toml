@@ -197,8 +197,8 @@ ignore = [
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-# Tests: Allow missing docstrings, magic values, unused fixture args, and in-function imports
-"tests/*" = ["D103", "ANN201", "PLR2004", "ARG001", "ARG002", "PLC0415"]
+# Tests: Allow missing docstrings, magic values, unused fixture args, in-function imports, and fixture type hints
+"tests/*" = ["D103", "ANN001", "ANN201", "PLR2004", "ARG001", "ARG002", "PLC0415"]
 # Settings classes legitimately need Any for dynamic value storage
 "**/app_settings.py" = ["ANN401"]
 
