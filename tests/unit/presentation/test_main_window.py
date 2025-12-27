@@ -382,3 +382,300 @@ class TestInkMainWindowMenuBar:
         assert window.edit_menu.isEnabled()
         assert window.view_menu.isEnabled()
         assert window.help_menu.isEnabled()
+
+
+# =============================================================================
+# View Control Toolbar Actions Tests (E06-F03-T02)
+# =============================================================================
+
+
+class TestViewControlActions:
+    """Tests for view control toolbar actions - E06-F03-T02.
+
+    Verifies:
+    - View control actions are added to toolbar (Zoom In, Zoom Out, Fit View)
+    - Actions have correct keyboard shortcuts
+    - Actions have tooltips with shortcut hints
+    - Actions trigger correct canvas methods
+    - Actions handle missing canvas gracefully (no crash)
+    - Actions are always enabled
+    - Actions appear in correct order: Zoom Out, Zoom In, Fit View
+
+    See Also:
+        - Spec E06-F03-T02 for view control tools requirements
+        - Pre-docs E06-F03-T02 for implementation details
+    """
+
+    def test_view_actions_created(self, qtbot: QtBot, app_settings: AppSettings) -> None:
+        """Test view control actions are added to toolbar.
+
+        Spec: Zoom In, Zoom Out, Fit View buttons appear in toolbar.
+        """
+        from PySide6.QtWidgets import QToolBar
+
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        toolbar = window.findChild(QToolBar, "MainToolBar")
+        assert toolbar is not None
+
+        actions = toolbar.actions()
+        action_texts = [a.text() for a in actions if not a.isSeparator()]
+
+        assert "Zoom In" in action_texts
+        assert "Zoom Out" in action_texts
+        assert "Fit View" in action_texts
+
+    def test_view_actions_order(self, qtbot: QtBot, app_settings: AppSettings) -> None:
+        """Test view actions appear in correct order: Zoom Out, Zoom In, Fit View.
+
+        Spec: Buttons arranged in order: Zoom Out, Zoom In, Fit View.
+        This follows the conventional order (decrease first, increase second).
+        """
+        from PySide6.QtWidgets import QToolBar
+
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        toolbar = window.findChild(QToolBar, "MainToolBar")
+        actions = toolbar.actions()
+        action_texts = [a.text() for a in actions if not a.isSeparator()]
+
+        # Find indices of view actions
+        zoom_out_idx = action_texts.index("Zoom Out")
+        zoom_in_idx = action_texts.index("Zoom In")
+        fit_view_idx = action_texts.index("Fit View")
+
+        # Should be in order: Zoom Out < Zoom In < Fit View
+        assert zoom_out_idx < zoom_in_idx < fit_view_idx
+
+    def test_view_action_shortcuts(self, qtbot: QtBot, app_settings: AppSettings) -> None:
+        """Test view actions have correct keyboard shortcuts.
+
+        Spec:
+        - Zoom In: Ctrl+= (Qt standard ZoomIn)
+        - Zoom Out: Ctrl+- (Qt standard ZoomOut)
+        - Fit View: Ctrl+0 (custom, industry convention)
+        """
+        from PySide6.QtGui import QKeySequence
+        from PySide6.QtWidgets import QToolBar
+
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        toolbar = window.findChild(QToolBar, "MainToolBar")
+        actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
+
+        zoom_in = actions["Zoom In"]
+        zoom_out = actions["Zoom Out"]
+        fit_view = actions["Fit View"]
+
+        assert zoom_in.shortcut() == QKeySequence.StandardKey.ZoomIn
+        assert zoom_out.shortcut() == QKeySequence.StandardKey.ZoomOut
+        assert fit_view.shortcut() == QKeySequence("Ctrl+0")
+
+    def test_view_action_tooltips(self, qtbot: QtBot, app_settings: AppSettings) -> None:
+        """Test tooltips include action name and keyboard shortcut.
+
+        Spec: Tooltips display on hover with action name and shortcut.
+        """
+        from PySide6.QtWidgets import QToolBar
+
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        toolbar = window.findChild(QToolBar, "MainToolBar")
+        actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
+
+        # Tooltips should contain shortcut information
+        assert "Ctrl" in actions["Zoom In"].toolTip()
+        assert "Ctrl" in actions["Zoom Out"].toolTip()
+        assert "Ctrl+0" in actions["Fit View"].toolTip()
+
+    def test_zoom_in_triggered(self, qtbot: QtBot, app_settings: AppSettings) -> None:
+        """Test zoom in action calls canvas.zoom_in().
+
+        Spec: Clicking Zoom In button zooms canvas in.
+        """
+        from unittest.mock import Mock
+
+        from PySide6.QtWidgets import QToolBar
+
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        # Mock the canvas with zoom_in method
+        mock_canvas = Mock()
+        window.schematic_canvas = mock_canvas
+
+        toolbar = window.findChild(QToolBar, "MainToolBar")
+        actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
+
+        actions["Zoom In"].trigger()
+        mock_canvas.zoom_in.assert_called_once()
+
+    def test_zoom_out_triggered(self, qtbot: QtBot, app_settings: AppSettings) -> None:
+        """Test zoom out action calls canvas.zoom_out().
+
+        Spec: Clicking Zoom Out button zooms canvas out.
+        """
+        from unittest.mock import Mock
+
+        from PySide6.QtWidgets import QToolBar
+
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        # Mock the canvas with zoom_out method
+        mock_canvas = Mock()
+        window.schematic_canvas = mock_canvas
+
+        toolbar = window.findChild(QToolBar, "MainToolBar")
+        actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
+
+        actions["Zoom Out"].trigger()
+        mock_canvas.zoom_out.assert_called_once()
+
+    def test_fit_view_triggered(self, qtbot: QtBot, app_settings: AppSettings) -> None:
+        """Test fit view action calls canvas.fit_view().
+
+        Spec: Clicking Fit View button fits content to view.
+        """
+        from unittest.mock import Mock
+
+        from PySide6.QtWidgets import QToolBar
+
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        # Mock the canvas with fit_view method
+        mock_canvas = Mock()
+        window.schematic_canvas = mock_canvas
+
+        toolbar = window.findChild(QToolBar, "MainToolBar")
+        actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
+
+        actions["Fit View"].trigger()
+        mock_canvas.fit_view.assert_called_once()
+
+    def test_view_actions_without_canvas(self, qtbot: QtBot, app_settings: AppSettings) -> None:
+        """Test view actions don't crash when canvas is missing.
+
+        Spec: Actions gracefully handle missing canvas (no crash).
+        """
+        from PySide6.QtWidgets import QToolBar
+
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        # Set canvas to None to simulate missing canvas
+        window.schematic_canvas = None  # type: ignore[assignment]
+
+        toolbar = window.findChild(QToolBar, "MainToolBar")
+        actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
+
+        # Should not raise exception
+        actions["Zoom In"].trigger()
+        actions["Zoom Out"].trigger()
+        actions["Fit View"].trigger()
+
+    def test_view_actions_without_zoom_methods(
+        self, qtbot: QtBot, app_settings: AppSettings
+    ) -> None:
+        """Test view actions don't crash when canvas lacks zoom methods.
+
+        Actions should gracefully handle a canvas that doesn't have
+        the expected zoom_in/zoom_out/fit_view methods.
+        """
+        from unittest.mock import Mock
+
+        from PySide6.QtWidgets import QToolBar
+
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        # Create a mock canvas without zoom methods
+        mock_canvas = Mock(spec=[])  # Empty spec means no methods
+        window.schematic_canvas = mock_canvas
+
+        toolbar = window.findChild(QToolBar, "MainToolBar")
+        actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
+
+        # Should not raise exception - graceful degradation
+        actions["Zoom In"].trigger()
+        actions["Zoom Out"].trigger()
+        actions["Fit View"].trigger()
+
+    def test_view_actions_always_enabled(self, qtbot: QtBot, app_settings: AppSettings) -> None:
+        """Test view actions are always enabled.
+
+        Spec: Buttons remain enabled at all times.
+        Unlike undo/redo, view actions are not state-dependent.
+        """
+        from PySide6.QtWidgets import QToolBar
+
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        toolbar = window.findChild(QToolBar, "MainToolBar")
+        actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
+
+        assert actions["Zoom In"].isEnabled()
+        assert actions["Zoom Out"].isEnabled()
+        assert actions["Fit View"].isEnabled()
+
+    def test_add_view_actions_method_exists(self, qtbot: QtBot, app_settings: AppSettings) -> None:
+        """Test that _add_view_actions() method exists.
+
+        Spec: Implementation uses _add_view_actions() helper method.
+        """
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        assert hasattr(window, "_add_view_actions")
+        assert callable(window._add_view_actions)
+
+    def test_view_action_handlers_exist(self, qtbot: QtBot, app_settings: AppSettings) -> None:
+        """Test that action handler methods exist.
+
+        Spec: _on_zoom_in(), _on_zoom_out(), _on_fit_view() handlers exist.
+        """
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        assert hasattr(window, "_on_zoom_in")
+        assert callable(window._on_zoom_in)
+
+        assert hasattr(window, "_on_zoom_out")
+        assert callable(window._on_zoom_out)
+
+        assert hasattr(window, "_on_fit_view")
+        assert callable(window._on_fit_view)
+
+    def test_toolbar_has_separator_after_view_actions(
+        self, qtbot: QtBot, app_settings: AppSettings
+    ) -> None:
+        """Test visual separator is added after view control group.
+
+        Spec: Visual separator before and after view group.
+        """
+        from PySide6.QtWidgets import QToolBar
+
+        window = InkMainWindow(app_settings)
+        qtbot.addWidget(window)
+
+        toolbar = window.findChild(QToolBar, "MainToolBar")
+        actions = toolbar.actions()
+
+        # Find Fit View action (last in view group)
+        fit_view_idx = None
+        for i, action in enumerate(actions):
+            if action.text() == "Fit View":
+                fit_view_idx = i
+                break
+
+        assert fit_view_idx is not None
+
+        # Next action after Fit View should be a separator
+        if fit_view_idx + 1 < len(actions):
+            assert actions[fit_view_idx + 1].isSeparator()
