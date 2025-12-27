@@ -37,6 +37,7 @@ from PySide6.QtWidgets import QDockWidget, QFileDialog, QMainWindow, QMenu, QMes
 
 from ink.presentation.canvas import SchematicCanvas
 from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
+from ink.presentation.state import PanelStateManager
 
 if TYPE_CHECKING:
     from ink.infrastructure.persistence.app_settings import AppSettings
@@ -73,6 +74,7 @@ class InkMainWindow(QMainWindow):
         app_settings: Application settings manager for recent files persistence.
         schematic_canvas: The central canvas widget for schematic visualization.
         recent_files_menu: Submenu for displaying recent files.
+        panel_state_manager: Manages panel state tracking and visibility control.
         hierarchy_panel: Placeholder for hierarchy tree (full impl: E04-F01).
         hierarchy_dock: Dock widget containing hierarchy_panel.
         property_panel: Placeholder for property inspector (full impl: E04-F04).
@@ -101,6 +103,7 @@ class InkMainWindow(QMainWindow):
     app_settings: AppSettings
     schematic_canvas: SchematicCanvas
     recent_files_menu: QMenu
+    panel_state_manager: PanelStateManager
     hierarchy_panel: HierarchyPanel
     hierarchy_dock: QDockWidget
     property_panel: PropertyPanel
@@ -588,14 +591,22 @@ class InkMainWindow(QMainWindow):
         (hierarchy_panel, property_panel, message_panel) for direct access
         when implementing panel functionality in future epics.
 
+        After creating dock widgets, a PanelStateManager is initialized to
+        track panel state changes. The manager enables:
+        - Reactive state tracking via Qt signals
+        - Panel visibility control (show/hide/toggle)
+        - State capture for persistence
+
         See Also:
             - E06-F02: View menu toggle actions for panels
             - E06-F05: saveState()/restoreState() for dock persistence
+            - E06-F05-T01: PanelStateManager implementation
         """
         self._setup_hierarchy_dock()
         self._setup_property_dock()
         self._setup_message_dock()
         self._set_initial_dock_sizes()
+        self._setup_panel_state_manager()
 
     def _setup_hierarchy_dock(self) -> None:
         """Create and configure the hierarchy dock widget (left area).
@@ -728,6 +739,36 @@ class InkMainWindow(QMainWindow):
         # 100px allows ~4-5 lines of log messages
         self.message_dock.setMinimumHeight(100)
         self.message_panel.setMinimumSize(300, 100)
+
+    def _setup_panel_state_manager(self) -> None:
+        """Initialize PanelStateManager and register all dock panels.
+
+        Creates a PanelStateManager to track dock widget state changes.
+        The manager monitors visibility, floating, and location changes
+        via Qt signals and maintains synchronized panel state.
+
+        Panel Registration:
+            - "Hierarchy": hierarchy_dock (left area)
+            - "Properties": property_dock (right area)
+            - "Messages": message_dock (bottom area)
+
+        The manager enables:
+            - Reactive state tracking via custom signals
+            - Panel visibility control (show/hide/toggle)
+            - State capture for persistence
+
+        See Also:
+            - E06-F05-T01: PanelStateManager specification
+            - PanelStateManager for API documentation
+        """
+        # Create the panel state manager with reference to this window
+        self.panel_state_manager = PanelStateManager(self)
+
+        # Register all dock widgets for state tracking
+        # Names match the dock widget titles for consistency
+        self.panel_state_manager.register_panel("Hierarchy", self.hierarchy_dock)
+        self.panel_state_manager.register_panel("Properties", self.property_dock)
+        self.panel_state_manager.register_panel("Messages", self.message_dock)
 
     # =========================================================================
     # Window Geometry Persistence (E06-F06-T02)
