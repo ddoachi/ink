@@ -10,12 +10,23 @@ through mock implementations.
 
 Available Protocols:
     PinDirectionService: Query interface for pin direction lookups
+    LatchIdentifier: Protocol for sequential element detection
 
 See Also:
     - ink.infrastructure.services: Infrastructure implementations
     - docs/architecture/ddd-architecture.md: DDD design patterns
 """
 
+from ink.domain.services.latch_identifier import (
+    DetectionStrategy,
+    LatchIdentifier,
+    SequentialDetectionResult,
+)
 from ink.domain.services.pin_direction_service import PinDirectionService
 
-__all__ = ["PinDirectionService"]
+__all__ = [
+    "DetectionStrategy",
+    "LatchIdentifier",
+    "PinDirectionService",
+    "SequentialDetectionResult",
+]
