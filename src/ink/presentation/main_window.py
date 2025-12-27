@@ -207,6 +207,10 @@ class InkMainWindow(QMainWindow):
         self._setup_menus()
         self._setup_toolbar()
 
+        # Connect canvas signals to status bar updates (E06-F04-T03)
+        # Must be called after both canvas and status bar are created
+        self._connect_status_signals()
+
         # Restore geometry AFTER all widgets are created
         self._restore_geometry()
 
@@ -1507,10 +1511,36 @@ class InkMainWindow(QMainWindow):
         return separator
 
     # =========================================================================
-    # Selection Status Display (E06-F04-T02)
+    # Status Bar Update Methods (E06-F04-T02, E06-F04-T03)
     # =========================================================================
-    # These methods handle selection count display in the status bar.
-    # The selection_label widget is updated when objects are selected/deselected.
+    # These methods update status bar widgets when canvas/selection state changes.
+    # They are connected to canvas/service signals for real-time updates.
+
+    def update_zoom_status(self, zoom_percent: float) -> None:
+        """Update zoom level in status bar.
+
+        Updates the zoom_label text to show the current zoom level as a
+        percentage. The value is rounded to the nearest integer for display
+        (no decimal places).
+
+        This method is connected to SchematicCanvas.zoom_changed signal
+        for automatic updates when the user zooms in/out.
+
+        Args:
+            zoom_percent: Current zoom level as percentage (e.g., 150.0 for 150%).
+                Expected range is 10.0 to 1000.0 (10% to 1000%).
+
+        Example:
+            >>> window.update_zoom_status(150.0)  # Shows "Zoom: 150%"
+            >>> window.update_zoom_status(75.5)   # Shows "Zoom: 76%" (rounded)
+
+        See Also:
+            - Spec E06-F04-T03 for zoom level display requirements
+            - SchematicCanvas.zoom_changed for the signal that triggers updates
+        """
+        # Format zoom percentage as integer (no decimal places)
+        # Using :.0f rounds to nearest integer
+        self.zoom_label.setText(f"Zoom: {zoom_percent:.0f}%")
 
     def update_selection_status(self, count: int) -> None:
         """Update selection count in status bar.
@@ -1545,30 +1575,32 @@ class InkMainWindow(QMainWindow):
     def _connect_status_signals(self) -> None:
         """Connect signals to status bar update methods.
 
-        Establishes signal-slot connections between application services
-        and status bar update methods. Currently handles:
-            - selection_service.selection_changed → update_selection_status
+        Establishes signal-slot connections between the schematic canvas,
+        application services, and status bar update methods. This enables
+        real-time status bar updates when state changes.
 
-        This method is called during initialization to set up reactive updates.
-        It handles the case where services may not yet be initialized by
-        checking for attribute existence before attempting connection.
+        Signal Connections:
+            - schematic_canvas.zoom_changed → update_zoom_status (E06-F04-T03)
+            - selection_service.selection_changed → update_selection_status (E06-F04-T02)
 
-        Connection Strategy:
-            - Check if service attribute exists (hasattr)
-            - Check if service has the expected signal (hasattr on signal)
-            - Connect signal to lambda that extracts count from items list
+        This method handles the case where the canvas or services may not yet
+        be initialized by checking for attribute existence before attempting
+        connection.
 
-        Design Decisions:
-            - Lambda wrapper: Allows extracting len(items) from signal
-            - Defensive checks: Prevents AttributeError during initialization
-            - No error on missing service: Graceful degradation when services
-              are not yet set up (can be reconnected later)
+        Called during window initialization after both the canvas and
+        status bar have been created.
 
         See Also:
+            - Spec E06-F04-T03 for zoom level display requirements
             - E06-F04-T02: Selection status display specification
             - E04-F01: Selection service (provides selection_changed signal)
         """
-        # Connect selection service signal if service is available
+        # Connect zoom changes from canvas to status update (E06-F04-T03)
+        # Check for signal existence to handle placeholder canvas gracefully
+        if hasattr(self, "schematic_canvas") and hasattr(self.schematic_canvas, "zoom_changed"):
+            self.schematic_canvas.zoom_changed.connect(self.update_zoom_status)
+
+        # Connect selection service signal if service is available (E06-F04-T02)
         # The selection service emits selection_changed with a list of selected items
         if hasattr(self, "selection_service"):
             service = self.selection_service
