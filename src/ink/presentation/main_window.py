@@ -1029,6 +1029,78 @@ class InkMainWindow(QMainWindow):
         return separator
 
     # =========================================================================
+    # Selection Status Display (E06-F04-T02)
+    # =========================================================================
+    # These methods handle selection count display in the status bar.
+    # The selection_label widget is updated when objects are selected/deselected.
+
+    def update_selection_status(self, count: int) -> None:
+        """Update selection count in status bar.
+
+        Updates the selection_label widget to display the current number
+        of selected objects in the format "Selected: N".
+
+        This method is called:
+            - When selection changes via user interaction
+            - When selection service emits selection_changed signal
+            - When selection is cleared (count=0)
+
+        Args:
+            count: Number of currently selected objects. Should be non-negative.
+
+        Example:
+            >>> window.update_selection_status(0)    # "Selected: 0"
+            >>> window.update_selection_status(1)    # "Selected: 1"
+            >>> window.update_selection_status(42)   # "Selected: 42"
+
+        Note:
+            For performance, this method directly updates the label text
+            without additional validation. The count is trusted to come
+            from the selection service which manages the selection state.
+
+        See Also:
+            - E06-F04-T02: Selection status display specification
+            - E04-F01: Selection service (emits selection_changed signal)
+        """
+        self.selection_label.setText(f"Selected: {count}")
+
+    def _connect_status_signals(self) -> None:
+        """Connect signals to status bar update methods.
+
+        Establishes signal-slot connections between application services
+        and status bar update methods. Currently handles:
+            - selection_service.selection_changed → update_selection_status
+
+        This method is called during initialization to set up reactive updates.
+        It handles the case where services may not yet be initialized by
+        checking for attribute existence before attempting connection.
+
+        Connection Strategy:
+            - Check if service attribute exists (hasattr)
+            - Check if service has the expected signal (hasattr on signal)
+            - Connect signal to lambda that extracts count from items list
+
+        Design Decisions:
+            - Lambda wrapper: Allows extracting len(items) from signal
+            - Defensive checks: Prevents AttributeError during initialization
+            - No error on missing service: Graceful degradation when services
+              are not yet set up (can be reconnected later)
+
+        See Also:
+            - E06-F04-T02: Selection status display specification
+            - E04-F01: Selection service (provides selection_changed signal)
+        """
+        # Connect selection service signal if service is available
+        # The selection service emits selection_changed with a list of selected items
+        if hasattr(self, "selection_service"):
+            service = self.selection_service
+            # Verify the service has the expected signal before connecting
+            if hasattr(service, "selection_changed"):
+                service.selection_changed.connect(
+                    lambda items: self.update_selection_status(len(items))
+                )
+
+    # =========================================================================
     # Window Geometry Persistence (E06-F06-T02)
     # =========================================================================
     # These methods handle saving and restoring window geometry and state.
