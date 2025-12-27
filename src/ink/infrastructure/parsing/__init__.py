@@ -9,9 +9,11 @@ Main Components:
 - LineType: Enumeration of CDL line types (SUBCKT, ENDS, INSTANCE, etc.)
 - CDLToken: Data class representing a tokenized line
 - NetNormalizer: Normalizes and classifies net names
+- SubcircuitParser: Parses .SUBCKT/.ENDS blocks into SubcircuitDefinition objects
 """
 
 from ink.infrastructure.parsing.cdl_lexer import CDLLexer, CDLToken, LineType
 from ink.infrastructure.parsing.net_normalizer import NetNormalizer
+from ink.infrastructure.parsing.subcircuit_parser import SubcircuitParser
 
-__all__ = ["CDLLexer", "CDLToken", "LineType", "NetNormalizer"]
+__all__ = ["CDLLexer", "CDLToken", "LineType", "NetNormalizer", "SubcircuitParser"]

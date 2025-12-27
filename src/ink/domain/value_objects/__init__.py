@@ -6,5 +6,6 @@ unique identifier.
 """
 
 from ink.domain.value_objects.net import NetInfo, NetType
+from ink.domain.value_objects.subcircuit import SubcircuitDefinition
 
-__all__ = ["NetInfo", "NetType"]
+__all__ = ["NetInfo", "NetType", "SubcircuitDefinition"]
