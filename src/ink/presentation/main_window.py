@@ -187,6 +187,10 @@ class InkMainWindow(QMainWindow):
         self._setup_menus()
         self._setup_toolbar()
 
+        # Connect canvas signals to status bar updates (E06-F04-T03)
+        # Must be called after both canvas and status bar are created
+        self._connect_status_signals()
+
         # Restore geometry AFTER all widgets are created
         self._restore_geometry()
 
@@ -1027,6 +1031,65 @@ class InkMainWindow(QMainWindow):
         separator = QLabel(" │ ")
         separator.setStyleSheet("color: gray;")
         return separator
+
+    # =========================================================================
+    # Status Bar Update Methods (E06-F04-T03)
+    # =========================================================================
+    # These methods update status bar widgets when canvas state changes.
+    # They are connected to canvas signals for real-time updates.
+
+    def update_zoom_status(self, zoom_percent: float) -> None:
+        """Update zoom level in status bar.
+
+        Updates the zoom_label text to show the current zoom level as a
+        percentage. The value is rounded to the nearest integer for display
+        (no decimal places).
+
+        This method is connected to SchematicCanvas.zoom_changed signal
+        for automatic updates when the user zooms in/out.
+
+        Args:
+            zoom_percent: Current zoom level as percentage (e.g., 150.0 for 150%).
+                Expected range is 10.0 to 1000.0 (10% to 1000%).
+
+        Example:
+            >>> window.update_zoom_status(150.0)  # Shows "Zoom: 150%"
+            >>> window.update_zoom_status(75.5)   # Shows "Zoom: 76%" (rounded)
+
+        See Also:
+            - Spec E06-F04-T03 for zoom level display requirements
+            - SchematicCanvas.zoom_changed for the signal that triggers updates
+        """
+        # Format zoom percentage as integer (no decimal places)
+        # Using :.0f rounds to nearest integer
+        self.zoom_label.setText(f"Zoom: {zoom_percent:.0f}%")
+
+    def _connect_status_signals(self) -> None:
+        """Connect canvas signals to status bar update methods.
+
+        Establishes signal/slot connections between the schematic canvas
+        and status bar update methods. This enables real-time status bar
+        updates when canvas state changes (zoom, selection, etc.).
+
+        Signal Connections:
+            - schematic_canvas.zoom_changed → update_zoom_status
+
+        This method handles the case where the canvas may not yet be
+        initialized or may not have the expected signals. It uses hasattr
+        checks to avoid AttributeError exceptions.
+
+        Called during window initialization after both the canvas and
+        status bar have been created.
+
+        See Also:
+            - Spec E06-F04-T03 for zoom level display requirements
+            - E06-F04-T02 for selection status display (future)
+            - E06-F04-T04 for file and object count display (future)
+        """
+        # Connect zoom changes from canvas to status update
+        # Check for signal existence to handle placeholder canvas gracefully
+        if hasattr(self, "schematic_canvas") and hasattr(self.schematic_canvas, "zoom_changed"):
+            self.schematic_canvas.zoom_changed.connect(self.update_zoom_status)
 
     # =========================================================================
     # Window Geometry Persistence (E06-F06-T02)
