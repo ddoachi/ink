@@ -1,0 +1,72 @@
+* Pin direction definitions for standard cell library
+* Format: PIN_NAME  DIRECTION
+* Directions: INPUT, OUTPUT, INOUT
+
+* =============================================================================
+* Basic Logic Gates (AND, OR, NAND, NOR, XOR, XNOR, INV, BUF)
+* =============================================================================
+* These are the most common input/output pins across basic cells
+
+A       INPUT
+B       INPUT
+C       INPUT
+D       INPUT
+Y       OUTPUT
+Z       OUTPUT
+ZN      OUTPUT
+
+* =============================================================================
+* Flip-Flops and Latches (DFF, DFFR, DFFS, LAT)
+* =============================================================================
+* Sequential elements with clock, data, reset, set, and output pins
+
+CK      INPUT
+CLK     INPUT
+D       INPUT
+Q       OUTPUT
+QN      OUTPUT
+RN      INPUT
+SN      INPUT
+CDN     INPUT
+SDN     INPUT
+
+* =============================================================================
+* Scan Chain Pins
+* =============================================================================
+* Used for DFT (Design for Test) functionality
+
+SE      INPUT
+SI      INPUT
+SO      OUTPUT
+TI      INPUT
+
+* =============================================================================
+* Clock Control Pins
+* =============================================================================
+* Integrated clock gating and control
+
+E       INPUT
+EN      INPUT
+TE      INPUT
+CP      OUTPUT
+
+* =============================================================================
+* Tri-State Buffer Pins (TBUF)
+* =============================================================================
+* Bidirectional or high-impedance capable pins
+
+OE      INPUT
+IO      INOUT
+
+* =============================================================================
+* Complex Cells (MUX, AOI, OAI)
+* =============================================================================
+* Multi-input logic cells
+
+I0      INPUT
+I1      INPUT
+I2      INPUT
+I3      INPUT
+S       INPUT
+S0      INPUT
+S1      INPUT

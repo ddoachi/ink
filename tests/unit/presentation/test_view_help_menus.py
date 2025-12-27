@@ -27,8 +27,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 from PySide6.QtCore import QSettings
-from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import QDialog, QMenu
+from PySide6.QtGui import QKeySequence
+from PySide6.QtWidgets import QDialog
 
 from ink.infrastructure.persistence.app_settings import AppSettings
 from ink.presentation.main_window import InkMainWindow
