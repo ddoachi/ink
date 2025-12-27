@@ -662,24 +662,34 @@ class TestGracefulDegradation:
         main_window._on_redo()
         main_window._update_undo_redo_state()
 
-    def test_no_crash_without_search_panel(self, main_window: InkMainWindow) -> None:
+    def test_no_crash_without_search_panel(
+        self, main_window: InkMainWindow, qtbot: QtBot
+    ) -> None:
         """Test search doesn't crash when search panel missing.
 
         This is important for MVP where panels may not be fully integrated.
-        When search panel is unavailable, a status bar message should be shown.
+        When search panel is unavailable, the code falls back to message_dock.
+        When neither is available, a status bar message should be shown.
         """
+        # Show window so visibility tests work correctly
+        main_window.show()
+        qtbot.waitExposed(main_window)
+
         # Ensure no search panel attribute or set it to None
         if hasattr(main_window, "_search_panel"):
             # For this test, we need to handle the case where _search_panel
             # might be set to a real panel. Set it to None to test graceful handling.
             main_window._search_panel = None
 
-        # This should not raise an exception and should show status message
+        # First hide the message_dock to test it gets shown
+        main_window.message_dock.hide()
+
+        # This should not raise an exception
         main_window._on_find()
 
-        # Verify status bar shows feedback message
-        status_bar = main_window.statusBar()
-        assert status_bar.currentMessage() == "Search panel not yet available"
+        # With _search_panel=None, the code falls back to message_dock
+        # which exists in InkMainWindow, so the dock should not be hidden
+        assert not main_window.message_dock.isHidden()
 
     def test_update_state_without_service_is_safe(self, main_window: InkMainWindow) -> None:
         """Test _update_undo_redo_state handles missing service gracefully."""

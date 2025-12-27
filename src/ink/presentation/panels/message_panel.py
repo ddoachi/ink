@@ -8,16 +8,18 @@ Design Decisions:
     - Inherits from QWidget as placeholder is simpler than full view
     - Clear reference to future implementation epic in placeholder text
     - Styled text to appear as placeholder, not active content
+    - Provides focus_search_input() method for Edit > Find action (E06-F02-T03)
 
 See Also:
     - Spec E06-F01-T03 for dock widget requirements
     - Spec E04-F03 for full message panel implementation
+    - Spec E06-F02-T03 for Edit menu Find action integration
 """
 
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QLineEdit, QVBoxLayout, QWidget
 
 
 class MessagePanel(QWidget):
@@ -33,12 +35,17 @@ class MessagePanel(QWidget):
     - Status updates and notifications
     - Navigation history
 
+    Provides a search input field at the top for the Edit > Find action
+    (E06-F02-T03) to focus when invoked. This provides basic search
+    infrastructure that will be enhanced in E05-F01.
+
     Attributes:
-        None (placeholder has no meaningful state)
+        search_input: QLineEdit for search queries (placeholder for E05-F01).
 
     Example:
         >>> from ink.presentation.panels import MessagePanel
         >>> panel = MessagePanel()
+        >>> panel.focus_search_input()  # Set focus to search field
         >>> panel.show()
 
     Notes:
@@ -46,6 +53,9 @@ class MessagePanel(QWidget):
         The replacement will maintain the same class name and import path
         to avoid breaking changes to InkMainWindow.
     """
+
+    # Type hint for search input widget
+    search_input: QLineEdit
 
     # Placeholder text with implementation reference
     _PLACEHOLDER_TEXT: str = "Message Panel\n(Implementation: E04-F03)"
@@ -67,18 +77,34 @@ class MessagePanel(QWidget):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
-        """Setup placeholder UI with centered label.
+        """Setup placeholder UI with search input and centered label.
 
-        Creates a vertical box layout containing a single centered label
-        with placeholder text. The label is styled to appear as inactive
-        placeholder content rather than functional UI.
+        Creates a vertical box layout containing:
+        1. Search input field at the top for Edit > Find action (E06-F02-T03)
+        2. Placeholder label indicating future implementation
 
         The layout structure:
             QVBoxLayout
+                ├── QLineEdit (search input - for Ctrl+F focus)
                 └── QLabel (centered, styled placeholder text)
+
+        Design Decision:
+            The search input is added here to support the Edit > Find action
+            (E06-F02-T03) before the full search panel is implemented in E05-F01.
+            This provides basic search infrastructure that will be enhanced later.
         """
         # Create layout - QVBoxLayout allows vertical expansion
         layout = QVBoxLayout(self)
+
+        # =====================================================================
+        # Search Input (E06-F02-T03)
+        # Provides input field for Edit > Find action (Ctrl+F) to focus.
+        # This is placeholder infrastructure for E05-F01 search panel.
+        # =====================================================================
+        self.search_input = QLineEdit(self)
+        self.search_input.setPlaceholderText("Search cells, nets, or ports...")
+        self.search_input.setClearButtonEnabled(True)
+        layout.addWidget(self.search_input)
 
         # Create placeholder label with multi-line text
         placeholder = QLabel(self._PLACEHOLDER_TEXT, self)
@@ -91,3 +117,28 @@ class MessagePanel(QWidget):
 
         # Add label to layout - it will expand to fill available space
         layout.addWidget(placeholder)
+
+    def focus_search_input(self) -> None:
+        """Set focus to the search input field.
+
+        Called by InkMainWindow._on_find() when the user triggers
+        Edit > Find (Ctrl+F). This provides quick keyboard access
+        to search functionality.
+
+        Behavior:
+            1. Sets keyboard focus to the search input field
+            2. Selects any existing text for easy replacement
+
+        This allows the user to immediately start typing their search
+        query after pressing Ctrl+F.
+
+        See Also:
+            - E06-F02-T03: Edit menu Find action implementation
+            - E05-F01: Full search panel implementation (future)
+        """
+        # Set keyboard focus to the search input
+        self.search_input.setFocus()
+
+        # Select all existing text so user can type to replace
+        # This is the standard behavior for find dialogs
+        self.search_input.selectAll()

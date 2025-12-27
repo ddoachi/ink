@@ -35,7 +35,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtCore import QByteArray, QObject, Qt, Signal
 
 from ink.presentation.state.panel_state import (
     DockArea,
@@ -333,9 +333,10 @@ class PanelStateManager(QObject):
             individual visibility settings to handle dock arrangement first.
         """
         # Restore Qt's internal state first (handles complex docking)
-        if state.qt_geometry is not None:
+        # Validate types before calling Qt methods (handles corrupted settings)
+        if state.qt_geometry is not None and isinstance(state.qt_geometry, QByteArray):
             self.main_window.restoreGeometry(state.qt_geometry)
-        if state.qt_state is not None:
+        if state.qt_state is not None and isinstance(state.qt_state, QByteArray):
             self.main_window.restoreState(state.qt_state)
 
         # Apply individual panel visibility states
