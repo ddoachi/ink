@@ -50,6 +50,8 @@ from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
 from ink.presentation.state import PanelStateManager
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from ink.infrastructure.persistence.app_settings import AppSettings
 
 
@@ -118,6 +120,12 @@ class InkMainWindow(QMainWindow):
     view_menu: QMenu
     help_menu: QMenu
     recent_files_menu: QMenu
+    # Panels submenu and toggle actions (E06-F05-T03)
+    panels_menu: QMenu
+    hierarchy_toggle_action: QAction
+    property_toggle_action: QAction
+    message_toggle_action: QAction
+    reset_panel_layout_action: QAction
     panel_state_manager: PanelStateManager
     panel_settings_store: PanelSettingsStore
     hierarchy_panel: HierarchyPanel
@@ -552,18 +560,191 @@ class InkMainWindow(QMainWindow):
         self.edit_menu.addAction(self.find_action)
 
     def _create_view_menu(self) -> None:
-        """Create View menu items.
+        """Create View menu items with panel toggle actions.
 
-        Currently a stub - will be populated by E06-F02-T04 with:
-        - Zoom controls
-        - Panel visibility toggles
-        - Layout options
+        Populates the View menu with:
+        - Panels submenu for panel visibility toggles
+        - Panel toggle actions using Qt's toggleViewAction()
+        - Reset Panel Layout action
+
+        Panel Toggle Actions:
+            Uses Qt's built-in toggleViewAction() from QDockWidget which provides:
+            - Automatic checkable state (shows checkmark when visible)
+            - Bidirectional sync (menu ↔ panel visibility)
+            - Action text matches dock widget window title
+            - No manual signal handling needed
+
+        Keyboard Shortcuts:
+            - Ctrl+Shift+H: Toggle Hierarchy panel
+            - Ctrl+Shift+P: Toggle Properties panel
+            - Ctrl+Shift+M: Toggle Messages panel
+            - Ctrl+Shift+R: Reset panel layout
+
+        Design Decisions:
+            - Use Ctrl+Shift instead of Ctrl to avoid conflicts with standard shortcuts
+            - First letter of panel name for easy memorization
+            - Reset Layout at bottom with separator for visual grouping
 
         See Also:
-            - E06-F02-T04: View and Help menu actions implementation
+            - Spec E06-F05-T03 for panel toggle actions requirements
+            - E06-F05-T01: PanelStateManager integration
         """
-        # Stub: View menu items will be added by E06-F02-T04
-        pass
+        # Create Panels submenu for panel visibility toggles
+        # Using mnemonic &Panels for Alt+P keyboard access
+        self.panels_menu = self.view_menu.addMenu("&Panels")
+
+        # Get toggle actions from dock widgets
+        # Qt's toggleViewAction() provides automatic state synchronization:
+        # - Checkmark appears when panel is visible
+        # - Clicking toggles panel visibility
+        # - State syncs when panel is closed via X button
+        self._setup_panel_toggle_actions()
+
+        # Add separator before Reset Layout for visual grouping
+        self.panels_menu.addSeparator()
+
+        # Add Reset Panel Layout action
+        self._setup_reset_panel_layout_action()
+
+    def _setup_panel_toggle_actions(self) -> None:
+        """Set up toggle actions for each panel dock widget.
+
+        Creates checkable toggle actions using Qt's toggleViewAction() API.
+        Each action is configured with:
+        - Keyboard shortcut (Ctrl+Shift+<key>)
+        - Tooltip describing the action
+        - Status tip with shortcut hint for status bar display
+
+        The actions are added to the Panels submenu and stored as instance
+        attributes for programmatic access.
+
+        Note:
+            toggleViewAction() must be called after dock widgets are created.
+            The action text is automatically set to the dock widget's windowTitle.
+        """
+        # Hierarchy panel toggle action
+        # Uses dock widget's toggleViewAction() for automatic state sync
+        self.hierarchy_toggle_action = self.hierarchy_dock.toggleViewAction()
+        self.hierarchy_toggle_action.setShortcut("Ctrl+Shift+H")
+        self.hierarchy_toggle_action.setToolTip(
+            "Show or hide the hierarchy navigation panel"
+        )
+        self.hierarchy_toggle_action.setStatusTip(
+            "Toggle hierarchy panel visibility (Ctrl+Shift+H)"
+        )
+        self.panels_menu.addAction(self.hierarchy_toggle_action)
+
+        # Properties panel toggle action
+        self.property_toggle_action = self.property_dock.toggleViewAction()
+        self.property_toggle_action.setShortcut("Ctrl+Shift+P")
+        self.property_toggle_action.setToolTip(
+            "Show or hide the property inspector panel"
+        )
+        self.property_toggle_action.setStatusTip(
+            "Toggle property panel visibility (Ctrl+Shift+P)"
+        )
+        self.panels_menu.addAction(self.property_toggle_action)
+
+        # Messages panel toggle action
+        self.message_toggle_action = self.message_dock.toggleViewAction()
+        self.message_toggle_action.setShortcut("Ctrl+Shift+M")
+        self.message_toggle_action.setToolTip(
+            "Show or hide the message log panel"
+        )
+        self.message_toggle_action.setStatusTip(
+            "Toggle message panel visibility (Ctrl+Shift+M)"
+        )
+        self.panels_menu.addAction(self.message_toggle_action)
+
+        # Connect additional behavior for raising panels when shown
+        self._connect_panel_raise_behavior()
+
+    def _connect_panel_raise_behavior(self) -> None:
+        """Connect signals to raise panels when toggled to visible.
+
+        When a panel is toggled on via the menu action, it should be raised
+        (brought to front) to ensure the user sees the result of their action.
+        This is especially important when panels are tabbed together.
+
+        Note:
+            The triggered signal is emitted when the action is activated.
+            We check if the panel is now visible and raise it if so.
+        """
+        # Helper function to raise panel when toggled on
+        def make_raise_handler(dock_widget: QDockWidget) -> Callable[[bool], None]:
+            """Create a handler that raises the dock widget if visible.
+
+            Args:
+                dock_widget: The dock widget to potentially raise.
+
+            Returns:
+                Handler function for the triggered signal.
+            """
+            def handler(checked: bool) -> None:
+                # If action was checked (panel shown), raise to front
+                if checked:
+                    dock_widget.raise_()
+            return handler
+
+        # Connect raise handlers to toggle actions
+        self.hierarchy_toggle_action.triggered.connect(
+            make_raise_handler(self.hierarchy_dock)
+        )
+        self.property_toggle_action.triggered.connect(
+            make_raise_handler(self.property_dock)
+        )
+        self.message_toggle_action.triggered.connect(
+            make_raise_handler(self.message_dock)
+        )
+
+    def _setup_reset_panel_layout_action(self) -> None:
+        """Create and configure Reset Panel Layout action.
+
+        This action restores panels to their default layout:
+        - Hierarchy on left
+        - Properties on right
+        - Messages on bottom
+        - All panels visible
+
+        The action is added to the Panels submenu with a keyboard shortcut.
+        """
+        self.reset_panel_layout_action = QAction("&Reset Panel Layout", self)
+        self.reset_panel_layout_action.setShortcut("Ctrl+Shift+R")
+        self.reset_panel_layout_action.setToolTip(
+            "Reset panels to default layout"
+        )
+        self.reset_panel_layout_action.setStatusTip(
+            "Reset panel layout to defaults (Ctrl+Shift+R)"
+        )
+        self.reset_panel_layout_action.triggered.connect(self._reset_panel_layout)
+        self.panels_menu.addAction(self.reset_panel_layout_action)
+
+    def _reset_panel_layout(self) -> None:
+        """Reset panels to default layout.
+
+        Restores the default panel configuration:
+        - Hierarchy dock: Left area, visible
+        - Property dock: Right area, visible
+        - Message dock: Bottom area, visible
+        - All panels undocked (not floating)
+
+        This provides a quick way to restore a familiar layout if the user
+        has accidentally misconfigured their panels or wants to start fresh.
+        """
+        # Restore hierarchy dock to left area
+        self.hierarchy_dock.setFloating(False)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.hierarchy_dock)
+        self.hierarchy_dock.show()
+
+        # Restore property dock to right area
+        self.property_dock.setFloating(False)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.property_dock)
+        self.property_dock.show()
+
+        # Restore message dock to bottom area
+        self.message_dock.setFloating(False)
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.message_dock)
+        self.message_dock.show()
 
     def _create_help_menu(self) -> None:
         """Create Help menu items.
