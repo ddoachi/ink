@@ -467,7 +467,7 @@ class TestHelpMenuKeyboardShortcuts:
         assert shortcuts_action is not None
 
         # We need to mock the dialog to prevent blocking
-        # Mock where it's imported (main_window), not where it's defined
+        # Patch where the name is looked up (in main_window), not where it's defined
         with patch(
             "ink.presentation.main_window.KeyboardShortcutsDialog"
         ) as MockDialog:
