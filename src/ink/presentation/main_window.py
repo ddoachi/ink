@@ -48,6 +48,7 @@ from PySide6.QtWidgets import (
 
 from ink.infrastructure.persistence.panel_settings_store import PanelSettingsStore
 from ink.presentation.canvas import SchematicCanvas
+from ink.presentation.dialogs.shortcuts_dialog import KeyboardShortcutsDialog
 from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
 from ink.presentation.state import PanelStateManager
 
@@ -940,12 +941,19 @@ class InkMainWindow(QMainWindow):
         self.edit_menu.addAction(self.find_action)
 
     def _create_view_menu(self) -> None:
-        """Create View menu items with panel toggle actions.
+        """Create View menu items with zoom controls and panel toggle actions.
 
         Populates the View menu with:
+        - Zoom In, Zoom Out, Fit View actions (E06-F02-T04)
+        - Separator between zoom and panels
         - Panels submenu for panel visibility toggles
         - Panel toggle actions using Qt's toggleViewAction()
         - Reset Panel Layout action
+
+        Zoom Actions (E06-F02-T04):
+            - Zoom In (Ctrl+=): Increase view scale
+            - Zoom Out (Ctrl+-): Decrease view scale
+            - Fit View (Ctrl+0): Fit all content in viewport
 
         Panel Toggle Actions:
             Uses Qt's built-in toggleViewAction() from QDockWidget which provides:
@@ -955,20 +963,58 @@ class InkMainWindow(QMainWindow):
             - No manual signal handling needed
 
         Keyboard Shortcuts:
+            - Ctrl+=: Zoom in
+            - Ctrl+-: Zoom out
+            - Ctrl+0: Fit view
             - Ctrl+Shift+H: Toggle Hierarchy panel
             - Ctrl+Shift+P: Toggle Properties panel
             - Ctrl+Shift+M: Toggle Messages panel
             - Ctrl+Shift+R: Reset panel layout
 
         Design Decisions:
-            - Use Ctrl+Shift instead of Ctrl to avoid conflicts with standard shortcuts
+            - Zoom actions at top of menu (most frequently used)
+            - Separator between zoom and panel controls
+            - Use Ctrl+Shift for panel toggles to avoid conflicts with zoom shortcuts
             - First letter of panel name for easy memorization
             - Reset Layout at bottom with separator for visual grouping
 
         See Also:
+            - Spec E06-F02-T04 for View menu zoom actions
             - Spec E06-F05-T03 for panel toggle actions requirements
             - E06-F05-T01: PanelStateManager integration
         """
+        # =====================================================================
+        # Zoom Actions (E06-F02-T04)
+        # =====================================================================
+
+        # Zoom In action (Ctrl+=)
+        zoom_in_action = QAction("Zoom &In", self)
+        zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn)
+        zoom_in_action.setStatusTip("Zoom in on schematic")
+        zoom_in_action.triggered.connect(self._on_zoom_in)
+        self.view_menu.addAction(zoom_in_action)
+
+        # Zoom Out action (Ctrl+-)
+        zoom_out_action = QAction("Zoom &Out", self)
+        zoom_out_action.setShortcut(QKeySequence.StandardKey.ZoomOut)
+        zoom_out_action.setStatusTip("Zoom out on schematic")
+        zoom_out_action.triggered.connect(self._on_zoom_out)
+        self.view_menu.addAction(zoom_out_action)
+
+        # Fit View action (Ctrl+0)
+        fit_view_action = QAction("&Fit View", self)
+        fit_view_action.setShortcut(QKeySequence("Ctrl+0"))
+        fit_view_action.setStatusTip("Fit schematic to view")
+        fit_view_action.triggered.connect(self._on_fit_view)
+        self.view_menu.addAction(fit_view_action)
+
+        # Separator between zoom controls and panel toggles
+        self.view_menu.addSeparator()
+
+        # =====================================================================
+        # Panels Submenu (E06-F05-T03)
+        # =====================================================================
+
         # Create Panels submenu for panel visibility toggles
         # Using mnemonic &Panels for Alt+P keyboard access
         self.panels_menu = self.view_menu.addMenu("&Panels")
@@ -1108,14 +1154,36 @@ class InkMainWindow(QMainWindow):
         """Create Help menu items.
 
         Populates the Help menu with:
+        - Keyboard Shortcuts (F1): Opens keyboard shortcuts dialog
+        - About Ink: Shows application information dialog
+        - Separator
         - Settings submenu for application settings management
 
-        Future tasks may add additional help items (About, Documentation, etc.)
+        Dialog Actions (E06-F02-T04):
+            - Keyboard Shortcuts: Opens KeyboardShortcutsDialog with F1 shortcut
+            - About Ink: Shows QMessageBox.about() with app info
 
         See Also:
-            - E06-F02-T04: Will add additional help items
+            - E06-F02-T04: Keyboard Shortcuts and About dialogs
             - E06-F06-T04: Settings management functionality
         """
+        # =====================================================================
+        # Keyboard Shortcuts Action (F1) - E06-F02-T04
+        # =====================================================================
+        shortcuts_action = QAction("&Keyboard Shortcuts", self)
+        shortcuts_action.setShortcut(QKeySequence("F1"))
+        shortcuts_action.setStatusTip("Show keyboard shortcuts")
+        shortcuts_action.triggered.connect(self._on_show_shortcuts)
+        self.help_menu.addAction(shortcuts_action)
+
+        # =====================================================================
+        # About Ink Action - E06-F02-T04
+        # =====================================================================
+        about_action = QAction("&About Ink", self)
+        about_action.setStatusTip("About this application")
+        about_action.triggered.connect(self._on_about)
+        self.help_menu.addAction(about_action)
+
         # Add separator before settings submenu
         self.help_menu.addSeparator()
 
@@ -2294,4 +2362,55 @@ class InkMainWindow(QMainWindow):
             self,
             "Settings File Location",
             f"Settings are stored at:\n\n{settings_path}",
+        )
+
+    # =========================================================================
+    # Help Menu Action Handlers (E06-F02-T04)
+    # =========================================================================
+
+    def _on_show_shortcuts(self) -> None:
+        """Handle Help > Keyboard Shortcuts action.
+
+        Opens the KeyboardShortcutsDialog which displays all available
+        keyboard shortcuts organized by category (File, Edit, View, etc.).
+
+        The dialog is modal and blocks until the user closes it.
+
+        See Also:
+            - E06-F02-T04: Keyboard Shortcuts dialog requirements
+            - KeyboardShortcutsDialog: The dialog class
+        """
+        dialog = KeyboardShortcutsDialog(self)
+        dialog.exec()
+
+    def _on_about(self) -> None:
+        """Handle Help > About Ink action.
+
+        Displays an About dialog using QMessageBox.about() with:
+        - Application name and version
+        - Brief description of the application
+        - Key features list
+        - Technology stack (PySide6, Python)
+        - Copyright information
+
+        The dialog uses platform-native styling via QMessageBox.about().
+
+        See Also:
+            - E06-F02-T04: About dialog requirements
+        """
+        QMessageBox.about(
+            self,
+            "About Ink",
+            "<h2>Ink - Incremental Schematic Viewer</h2>"
+            "<p>Version 0.1.0 (MVP)</p>"
+            "<p>A GUI tool for schematic exploration targeting gate-level netlists.</p>"
+            "<p><b>Features:</b></p>"
+            "<ul>"
+            "<li>Incremental exploration from user-selected points</li>"
+            "<li>Hop-based fanin/fanout expansion</li>"
+            "<li>Orthogonal net routing with Sugiyama layout</li>"
+            "<li>Search and navigation</li>"
+            "</ul>"
+            "<p>Built with PySide6 and Python</p>"
+            "<p>&copy; 2025 Ink Project</p>",
         )
