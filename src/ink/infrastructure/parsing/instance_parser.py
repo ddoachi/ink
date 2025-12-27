@@ -204,8 +204,7 @@ class InstanceParser:
         if definition is None:
             # Unknown cell type - create generic port names and warn
             self._warnings.append(
-                f"Line {line_num}: Unknown cell type '{cell_type}' "
-                f"for instance '{instance_name}'"
+                f"Line {line_num}: Unknown cell type '{cell_type}' for instance '{instance_name}'"
             )
             # Generate generic port names: port0, port1, etc.
             return {f"port{i}": net for i, net in enumerate(nets)}

@@ -175,9 +175,7 @@ class CellInstance:
             return f"{self.name} ({self.cell_type})"
 
         # Format connections as "port=net" pairs
-        conn_str = ", ".join(
-            f"{port}={net}" for port, net in self.connections.items()
-        )
+        conn_str = ", ".join(f"{port}={net}" for port, net in self.connections.items())
         return f"{self.name} ({self.cell_type}): {conn_str}"
 
     def __hash__(self) -> int:
