@@ -265,6 +265,71 @@ class Design:
         """
         return sum(1 for cell in self._cells.values() if cell.is_sequential)
 
+    def get_sequential_cells(self) -> list[Cell]:
+        """Get all sequential cells (flip-flops, latches) in the design.
+
+        Returns a filtered list of cells where is_sequential is True.
+        This is useful for analyzing timing boundaries, expansion limits,
+        and design statistics.
+
+        The returned list is a copy - modifying it does not affect
+        the design's internal storage.
+
+        Returns:
+            List of Cell entities that are sequential elements.
+            Empty list if no sequential cells exist.
+
+        Example:
+            >>> seq_cells = design.get_sequential_cells()
+            >>> for cell in seq_cells:
+            ...     print(f"{cell.name} is a {cell.cell_type}")
+            XFF1 is a DFF_X1
+            XFF2 is a LATCH_X1
+
+        See Also:
+            sequential_cell_count(): For counting without creating a list.
+            is_sequential_cell(): For O(1) lookup of a specific cell.
+        """
+        return [cell for cell in self._cells.values() if cell.is_sequential]
+
+    def is_sequential_cell(self, name: str) -> bool:
+        """Check if a named cell is a sequential element.
+
+        Provides O(1) lookup to determine if a cell is sequential
+        (flip-flop, latch). This is critical for expansion boundary
+        detection during schematic exploration.
+
+        Args:
+            name: The instance name of the cell to check.
+
+        Returns:
+            True if the cell is sequential (is_sequential=True),
+            False if the cell is combinational.
+
+        Raises:
+            KeyError: If no cell with the given name exists in the design.
+
+        Example:
+            >>> design.is_sequential_cell("XFF1")
+            True
+            >>> design.is_sequential_cell("XI1")
+            False
+            >>> design.is_sequential_cell("NONEXISTENT")
+            KeyError: "Cell 'NONEXISTENT' not found in design"
+
+        Note:
+            Uses the name index for O(1) lookup, making this efficient
+            for repeated queries during graph traversal.
+        """
+        # Use name index for O(1) lookup
+        cell_id = self._cell_name_index.get(name)
+        if cell_id is None:
+            raise KeyError(f"Cell '{name}' not found in design")
+
+        # Get cell from primary storage (also O(1))
+        cell = self._cells[cell_id]
+        return cell.is_sequential
+
     # =========================================================================
     # Net Management
     # =========================================================================
