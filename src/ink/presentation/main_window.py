@@ -33,7 +33,14 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QCloseEvent, QGuiApplication
-from PySide6.QtWidgets import QDockWidget, QFileDialog, QMainWindow, QMenu, QMessageBox
+from PySide6.QtWidgets import (
+    QDockWidget,
+    QFileDialog,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QToolBar,
+)
 
 from ink.presentation.canvas import SchematicCanvas
 from ink.presentation.panels import HierarchyPanel, MessagePanel, PropertyPanel
@@ -107,6 +114,7 @@ class InkMainWindow(QMainWindow):
     property_dock: QDockWidget
     message_panel: MessagePanel
     message_dock: QDockWidget
+    _toolbar: QToolBar
 
     # Window configuration constants
     # These are class-level to make requirements explicit and testable
@@ -160,6 +168,7 @@ class InkMainWindow(QMainWindow):
         self._setup_central_widget()
         self._setup_dock_widgets()
         self._setup_menus()
+        self._setup_toolbar()
 
         # Restore geometry AFTER all widgets are created
         self._restore_geometry()
@@ -292,6 +301,70 @@ class InkMainWindow(QMainWindow):
                 background-color: #ffffff;
             }
         """)
+
+    def _setup_toolbar(self) -> None:
+        """Create and configure the main toolbar.
+
+        Creates a QToolBar with standard configuration for hosting action
+        buttons. The toolbar is set up as infrastructure for subsequent
+        tasks (E06-F03-T02, E06-F03-T03) to add actual action buttons.
+
+        Toolbar Configuration:
+            - Window title: "Main Toolbar" (displayed when floated)
+            - Object name: "MainToolBar" (required for QSettings persistence)
+            - Movable: False (fixed position for MVP simplicity)
+            - Icon size: 24x24 pixels (standard toolbar icon size)
+            - Button style: Icon only (compact appearance with tooltips)
+            - Position: Top toolbar area (below menu bar)
+
+        Group Structure (separators added in subsequent tasks):
+            1. File Group: File operations (Open)
+            2. Edit Group: Undo/Redo operations
+            3. View Group: Zoom and view controls
+            4. Search Group: Search functionality
+
+        Design Decisions:
+            - Non-movable for MVP prevents accidental rearrangement
+            - 24x24 icon size is standard and works well on high-DPI displays
+            - Icon-only style keeps toolbar compact; tooltips provide labels
+            - Object name enables toolbar state persistence via QSettings
+
+        See Also:
+            - Spec E06-F03-T01 for toolbar infrastructure requirements
+            - Spec E06-F03-T02 for view control tools (adds zoom/fit actions)
+            - Spec E06-F03-T03 for edit/search tools (adds undo/redo/search)
+            - Spec E06-F03-T04 for icon resources
+        """
+        # Create toolbar with descriptive title
+        # Title is shown when toolbar is floated (future feature)
+        toolbar = QToolBar("Main Toolbar", self)
+
+        # Set object name for QSettings state persistence
+        # Without this, saveState()/restoreState() cannot identify the toolbar
+        toolbar.setObjectName("MainToolBar")
+
+        # Make toolbar fixed (non-movable) for MVP
+        # This prevents accidental rearrangement and simplifies the UI
+        # Future enhancement: Allow customization via preferences
+        toolbar.setMovable(False)
+
+        # Set standard 24x24 icon size
+        # This size is:
+        # - Readable on high-DPI displays
+        # - Consistent with common icon libraries
+        # - Standard for professional applications
+        toolbar.setIconSize(QSize(24, 24))
+
+        # Set button style to icon-only for compact appearance
+        # Text labels are available via tooltips on hover
+        toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
+        # Add toolbar to main window in top area (below menu bar)
+        self.addToolBar(toolbar)
+
+        # Store reference for action additions in subsequent tasks
+        # Tasks T02 and T03 will use this to add their actions
+        self._toolbar = toolbar
 
     def _setup_menus(self) -> None:
         """Set up application menu bar with File and Help menus.
