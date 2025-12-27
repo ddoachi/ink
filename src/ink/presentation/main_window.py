@@ -579,6 +579,7 @@ class InkMainWindow(QMainWindow):
         Behavior:
             - Panel hidden: Show panel and focus search input
             - Panel visible: Focus search input (panel stays visible)
+            - Panel not available: Show status bar message
 
         This design ensures users can quickly start searching without
         having to manually navigate to the search panel.
@@ -586,7 +587,7 @@ class InkMainWindow(QMainWindow):
         See Also:
             - Spec E06-F03-T03 for search panel requirements
         """
-        # Defensive check for search panel existence
+        # Check for search panel existence
         if hasattr(self, "_search_panel") and self._search_panel is not None:
             if self._search_panel.isVisible():
                 # Panel already visible - just focus the input
@@ -595,6 +596,9 @@ class InkMainWindow(QMainWindow):
                 # Panel hidden - show it and focus input
                 self._search_panel.show()
                 self._search_panel.focus_search_input()
+        else:
+            # Search panel not yet implemented - show status message
+            self.statusBar().showMessage("Search panel not yet available", 3000)
 
     def _update_undo_redo_state(self) -> None:
         """Update Undo/Redo button enabled state based on expansion history.
