@@ -161,3 +161,64 @@ class SchematicCanvas(QWidget):
         """)
 
         return label
+
+    # =========================================================================
+    # View Control Methods (E06-F03-T02)
+    # =========================================================================
+    # These methods provide the canvas API for toolbar view controls.
+    # Currently no-op for placeholder; will have real implementation in E02.
+
+    def zoom_in(self, factor: float = 1.2) -> None:
+        """Zoom in by scaling factor.
+
+        Increases the view scale by the given factor (default 1.2 = 20% increase).
+        In the placeholder implementation, this is a no-op.
+
+        Args:
+            factor: Scale multiplier (default 1.2).
+
+        Note:
+            Placeholder implementation for E06-F03-T02 toolbar integration.
+            Full implementation will be in E02 (Rendering epic) when this
+            becomes a QGraphicsView subclass.
+
+        See Also:
+            - E02: Full rendering implementation with actual zoom
+            - E06-F03-T02: Toolbar view controls
+        """
+        # Placeholder: No-op until E02 implements QGraphicsView with self.scale()
+
+    def zoom_out(self, factor: float = 1.2) -> None:
+        """Zoom out by inverse scaling factor.
+
+        Decreases the view scale by the inverse of the given factor
+        (default 1.2 = ~17% decrease).
+
+        Args:
+            factor: Scale divisor (default 1.2).
+
+        Note:
+            Placeholder implementation for E06-F03-T02 toolbar integration.
+            Full implementation will be in E02 (Rendering epic).
+
+        See Also:
+            - E02: Full rendering implementation with actual zoom
+            - E06-F03-T02: Toolbar view controls
+        """
+        # Placeholder: No-op until E02 implements QGraphicsView with self.scale()
+
+    def fit_view(self) -> None:
+        """Fit all visible items in view.
+
+        Centers the scene bounding rect in the viewport while preserving
+        the aspect ratio.
+
+        Note:
+            Placeholder implementation for E06-F03-T02 toolbar integration.
+            Full implementation will be in E02 (Rendering epic).
+
+        See Also:
+            - E02: Full rendering implementation with actual fit
+            - E06-F03-T02: Toolbar view controls
+        """
+        # Placeholder: No-op until E02 implements QGraphicsView with self.fitInView()
