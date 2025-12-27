@@ -1,15 +1,24 @@
 """Configuration module for Ink infrastructure layer.
 
 This module provides configuration classes for various Ink settings,
-particularly the net classification configuration which allows users
-to define custom power and ground net names per project.
+including net classification and latch identification configurations.
 
 Exports:
     NetClassificationConfig: Configuration for power/ground net classification.
+    LatchIdentificationConfig: Configuration for sequential cell pattern matching.
+    DEFAULT_SEQUENTIAL_PATTERNS: Default patterns for latch/flip-flop detection.
 """
 
+from ink.infrastructure.config.latch_config import (
+    DEFAULT_SEQUENTIAL_PATTERNS,
+    LatchIdentificationConfig,
+)
 from ink.infrastructure.config.net_classification_config import (
     NetClassificationConfig,
 )
 
-__all__ = ["NetClassificationConfig"]
+__all__ = [
+    "NetClassificationConfig",
+    "LatchIdentificationConfig",
+    "DEFAULT_SEQUENTIAL_PATTERNS",
+]

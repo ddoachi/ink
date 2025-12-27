@@ -1,0 +1,62 @@
+# Latch/Sequential Cell Identification Configuration
+# =================================================
+#
+# This file configures pattern matching for detecting sequential cells
+# (latches, flip-flops) in gate-level netlists.
+#
+# The configuration is used by the LatchDetectorService to identify cells
+# that should serve as expansion boundaries during schematic exploration.
+#
+# Pattern Syntax (Glob-Style):
+# ----------------------------
+#   *     - Matches any sequence of characters (including none)
+#   ?     - Matches any single character
+#
+# Examples:
+#   "*DFF*"    - Matches: DFFR_X1, SDFFR_X2, DFF_POS, SCAN_DFF
+#   "*LATCH*"  - Matches: LATCH_X1, DLATCH_X2, HLATCH
+#   "FF*"      - Matches: FF_X1, FF_X2 (but not JKFF_X1)
+#   "*_REG"    - Matches: D_REG, SCAN_REG
+#   "DFF_?"    - Matches: DFF_1, DFF_2 (single char after underscore)
+#
+# Pattern Order:
+# --------------
+# Patterns are checked in order from top to bottom.
+# Place more specific patterns before broader ones for efficiency.
+# The first matching pattern wins.
+#
+# Case Sensitivity:
+# -----------------
+# By default, matching is case-insensitive to handle varying
+# library conventions (DFFR_X1 vs dffr_x1 vs Dffr_X1).
+# Set case_sensitive: true if exact case matching is required.
+#
+# Common Cell Library Naming Conventions:
+# ---------------------------------------
+#   Standard Cell Libraries:  DFFR_X1, DFFR_X2, SDFFR_X1
+#   D Latches:                LATCH_X1, DLATCH_X2
+#   Generic Flip-Flops:       FF_POS, FF_NEG
+#   Scan Flip-Flops:          SDFF_X1, SCAN_DFF
+#   JK/SR Flip-Flops:         JKFF_X1, SRFF_X1
+#
+# Customization:
+# --------------
+# Edit the patterns list below to match your cell library's naming.
+# Restart the application after making changes.
+#
+# See Also:
+# ---------
+#   - Spec E01-F04-T01 for requirements
+#   - src/ink/infrastructure/config/latch_config.py for implementation
+
+latch_identification:
+  # Patterns for detecting sequential cells
+  # Order: specific patterns first, broader patterns last
+  patterns:
+    - "*DFF*"      # D flip-flops (DFFR_X1, SDFFR_X2, DFF_POS, SCAN_DFF, etc.)
+    - "*LATCH*"    # Latch elements (LATCH_X1, DLATCH_X2, HLATCH, etc.)
+    - "*FF*"       # Generic flip-flops - broader fallback (JKFF, SRFF, FF_X1, etc.)
+
+  # Case-insensitive matching (recommended for robustness)
+  # Set to true if your library uses strict case conventions
+  case_sensitive: false
