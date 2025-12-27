@@ -7,18 +7,22 @@ serves as the primary workspace for schematic visualization.
 Current implementation (E06-F01-T02):
     - SchematicCanvas: Placeholder widget for main window central area
 
+E02 - Rendering Epic Components:
+    - CellItem (E02-F01-T01): QGraphicsItem for cell symbol rendering
+
 Future implementation (E02 - Rendering):
     - Full QGraphicsView-based rendering with QGraphicsScene
-    - Cell, pin, and net visualization
+    - Pin and net visualization
     - Zoom and pan functionality
     - Selection and highlighting
 
 Example:
-    >>> from ink.presentation.canvas import SchematicCanvas
+    >>> from ink.presentation.canvas import SchematicCanvas, CellItem
     >>> canvas = SchematicCanvas()
     >>> canvas.show()
 """
 
+from ink.presentation.canvas.cell_item import CellItem
 from ink.presentation.canvas.schematic_canvas import SchematicCanvas
 
-__all__ = ["SchematicCanvas"]
+__all__ = ["CellItem", "SchematicCanvas"]
