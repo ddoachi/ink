@@ -11,11 +11,13 @@ Main Components:
 - NetNormalizer: Normalizes and classifies net names
 - SubcircuitParser: Parses .SUBCKT/.ENDS blocks into SubcircuitDefinition objects
 - InstanceParser: Parses X-prefixed instance lines into CellInstance objects
+- ParsedDesign: Infrastructure representation of parsed CDL data
 """
 
 from ink.infrastructure.parsing.cdl_lexer import CDLLexer, CDLToken, LineType
 from ink.infrastructure.parsing.instance_parser import InstanceParser
 from ink.infrastructure.parsing.net_normalizer import NetNormalizer
+from ink.infrastructure.parsing.parsed_design import ParsedDesign
 from ink.infrastructure.parsing.subcircuit_parser import SubcircuitParser
 
 __all__ = [
@@ -24,5 +26,6 @@ __all__ = [
     "InstanceParser",
     "LineType",
     "NetNormalizer",
+    "ParsedDesign",
     "SubcircuitParser",
 ]

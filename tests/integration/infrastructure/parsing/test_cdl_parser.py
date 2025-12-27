@@ -6,7 +6,7 @@ This module tests the CDLParser class which integrates:
 - InstanceParser: X-prefixed instance parsing
 - NetNormalizer: Net name normalization
 
-The CDLParser produces a complete Design aggregate root from CDL files.
+The CDLParser produces a ParsedDesign from CDL files.
 
 TDD: These tests are written first (RED phase) to define expected behavior.
 """
