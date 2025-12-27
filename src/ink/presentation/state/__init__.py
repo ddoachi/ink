@@ -39,10 +39,12 @@ from ink.presentation.state.panel_state import (
     PanelInfo,
     PanelState,
 )
+from ink.presentation.state.panel_state_manager import PanelStateManager
 
 __all__ = [
     "DockArea",
     "PanelGeometry",
     "PanelInfo",
     "PanelState",
+    "PanelStateManager",
 ]
