@@ -158,9 +158,7 @@ class Design:
             >>> inverters = design.get_instances_by_type("INV")
             >>> print(f"Found {len(inverters)} inverters")
         """
-        return [
-            inst for inst in self.instances.values() if inst.cell_type == cell_type
-        ]
+        return [inst for inst in self.instances.values() if inst.cell_type == cell_type]
 
     # -------------------------------------------------------------------------
     # Net Management

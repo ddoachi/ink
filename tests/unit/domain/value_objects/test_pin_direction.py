@@ -130,3 +130,43 @@ class TestPinDirectionEquality:
         assert PinDirection.INPUT != PinDirection.OUTPUT
         assert PinDirection.INPUT != PinDirection.INOUT
         assert PinDirection.OUTPUT != PinDirection.INOUT
+
+
+class TestPinDirectionIsInputMethod:
+    """Test suite for PinDirection.is_input() helper method.
+
+    The is_input() method returns True for INPUT and INOUT directions,
+    as INOUT pins can receive signals (bidirectional).
+    """
+
+    def test_input_is_input_returns_true(self) -> None:
+        """INPUT direction should return True for is_input()."""
+        assert PinDirection.INPUT.is_input() is True
+
+    def test_inout_is_input_returns_true(self) -> None:
+        """INOUT direction should return True for is_input() (bidirectional)."""
+        assert PinDirection.INOUT.is_input() is True
+
+    def test_output_is_input_returns_false(self) -> None:
+        """OUTPUT direction should return False for is_input()."""
+        assert PinDirection.OUTPUT.is_input() is False
+
+
+class TestPinDirectionIsOutputMethod:
+    """Test suite for PinDirection.is_output() helper method.
+
+    The is_output() method returns True for OUTPUT and INOUT directions,
+    as INOUT pins can drive signals (bidirectional).
+    """
+
+    def test_output_is_output_returns_true(self) -> None:
+        """OUTPUT direction should return True for is_output()."""
+        assert PinDirection.OUTPUT.is_output() is True
+
+    def test_inout_is_output_returns_true(self) -> None:
+        """INOUT direction should return True for is_output() (bidirectional)."""
+        assert PinDirection.INOUT.is_output() is True
+
+    def test_input_is_output_returns_false(self) -> None:
+        """INPUT direction should return False for is_output()."""
+        assert PinDirection.INPUT.is_output() is False
