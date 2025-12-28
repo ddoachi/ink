@@ -101,7 +101,7 @@ class TestLatchIdentificationConfigDataclass:
         # Test that it's frozen by attempting modification
         config = LatchIdentificationConfig(patterns=["*DFF*"], case_sensitive=False)
         with pytest.raises(AttributeError):
-            config.patterns = ["*LATCH*"]  # type: ignore[misc]
+            config.patterns = ["*LATCH*"]  # type: ignore[misc, assignment]
 
     def test_config_has_patterns_field(self) -> None:
         """Test that config has 'patterns' field as a sequence of strings."""

@@ -159,7 +159,7 @@ class TestCellImmutability:
         )
 
         with pytest.raises(FrozenInstanceError):
-            cell.pin_ids = [PinId("XI1.B")]  # type: ignore[misc]
+            cell.pin_ids = [PinId("XI1.B")]  # type: ignore[misc, assignment]
 
     def test_cell_is_sequential_cannot_be_reassigned(self) -> None:
         """Should raise error when trying to reassign is_sequential on frozen Cell."""

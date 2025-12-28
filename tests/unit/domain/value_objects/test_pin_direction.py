@@ -127,9 +127,10 @@ class TestPinDirectionEquality:
 
     def test_different_members_are_not_equal(self) -> None:
         """Different enum members should not be equal."""
-        assert PinDirection.INPUT != PinDirection.OUTPUT
-        assert PinDirection.INPUT != PinDirection.INOUT
-        assert PinDirection.OUTPUT != PinDirection.INOUT
+        # Intentionally comparing different enum members
+        assert PinDirection.INPUT != PinDirection.OUTPUT  # type: ignore[comparison-overlap]
+        assert PinDirection.INPUT != PinDirection.INOUT  # type: ignore[comparison-overlap]
+        assert PinDirection.OUTPUT != PinDirection.INOUT  # type: ignore[comparison-overlap]
 
 
 class TestPinDirectionIsInputMethod:

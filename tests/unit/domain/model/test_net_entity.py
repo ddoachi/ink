@@ -175,7 +175,7 @@ class TestNetImmutability:
         )
 
         with pytest.raises(FrozenInstanceError):
-            net.connected_pin_ids = [PinId("XI2.A")]  # type: ignore[misc]
+            net.connected_pin_ids = [PinId("XI2.A")]  # type: ignore[misc, assignment]
 
     def test_net_connected_pin_ids_tuple_is_immutable(self) -> None:
         """connected_pin_ids should be a tuple (immutable)."""

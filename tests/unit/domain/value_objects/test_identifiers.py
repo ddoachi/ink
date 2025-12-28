@@ -127,4 +127,5 @@ class TestIdentifierTypeDistinction:
 
         # At runtime, they're all equal strings
         # Type safety is enforced at compile time by mypy
-        assert cell_id == net_id == pin_id == port_id == "test"
+        # Intentionally comparing different types to verify runtime equality
+        assert cell_id == net_id == pin_id == port_id == "test"  # type: ignore[comparison-overlap]

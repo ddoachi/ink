@@ -19,6 +19,8 @@ See Also:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialogButtonBox,
@@ -30,11 +32,14 @@ from ink.infrastructure.config.net_classification_config import (
     NetClassificationConfig,
 )
 
+if TYPE_CHECKING:
+    from pytestqt.qtbot import QtBot
+
 
 class TestNetClassificationDialogCreation:
     """Tests for dialog instantiation and basic properties."""
 
-    def test_dialog_creates_successfully(self, qtbot) -> None:
+    def test_dialog_creates_successfully(self, qtbot: "QtBot") -> None:
         """Test that dialog can be created with a config."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -46,7 +51,7 @@ class TestNetClassificationDialogCreation:
 
         assert dialog is not None
 
-    def test_dialog_has_correct_title(self, qtbot) -> None:
+    def test_dialog_has_correct_title(self, qtbot: "QtBot") -> None:
         """Test that dialog has the expected window title."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -58,7 +63,7 @@ class TestNetClassificationDialogCreation:
 
         assert dialog.windowTitle() == "Net Classification Settings"
 
-    def test_dialog_has_minimum_size(self, qtbot) -> None:
+    def test_dialog_has_minimum_size(self, qtbot: "QtBot") -> None:
         """Test that dialog has a reasonable minimum size."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -75,7 +80,7 @@ class TestNetClassificationDialogCreation:
 class TestNetClassificationDialogUIComponents:
     """Tests for UI widget structure."""
 
-    def test_dialog_has_tab_widget(self, qtbot) -> None:
+    def test_dialog_has_tab_widget(self, qtbot: "QtBot") -> None:
         """Test that dialog contains a tab widget for Power/Ground."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -88,7 +93,7 @@ class TestNetClassificationDialogUIComponents:
         tab_widget = dialog.findChild(QTabWidget)
         assert tab_widget is not None
 
-    def test_dialog_has_power_tab(self, qtbot) -> None:
+    def test_dialog_has_power_tab(self, qtbot: "QtBot") -> None:
         """Test that dialog has a Power Nets tab."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -110,7 +115,7 @@ class TestNetClassificationDialogUIComponents:
 
         assert power_tab_index >= 0, "Power Nets tab not found"
 
-    def test_dialog_has_ground_tab(self, qtbot) -> None:
+    def test_dialog_has_ground_tab(self, qtbot: "QtBot") -> None:
         """Test that dialog has a Ground Nets tab."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -132,7 +137,7 @@ class TestNetClassificationDialogUIComponents:
 
         assert ground_tab_index >= 0, "Ground Nets tab not found"
 
-    def test_dialog_has_override_checkbox(self, qtbot) -> None:
+    def test_dialog_has_override_checkbox(self, qtbot: "QtBot") -> None:
         """Test that dialog has an override defaults checkbox."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -145,7 +150,7 @@ class TestNetClassificationDialogUIComponents:
         checkbox = dialog.findChild(QCheckBox)
         assert checkbox is not None
 
-    def test_dialog_has_ok_cancel_buttons(self, qtbot) -> None:
+    def test_dialog_has_ok_cancel_buttons(self, qtbot: "QtBot") -> None:
         """Test that dialog has OK and Cancel buttons."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -164,7 +169,7 @@ class TestNetClassificationDialogUIComponents:
         assert ok_button is not None
         assert cancel_button is not None
 
-    def test_dialog_has_list_widgets_for_names(self, qtbot) -> None:
+    def test_dialog_has_list_widgets_for_names(self, qtbot: "QtBot") -> None:
         """Test that dialog has list widgets for net names."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -183,7 +188,7 @@ class TestNetClassificationDialogUIComponents:
 class TestNetClassificationDialogConfigDisplay:
     """Tests that dialog displays current configuration correctly."""
 
-    def test_dialog_displays_power_names(self, qtbot) -> None:
+    def test_dialog_displays_power_names(self, qtbot: "QtBot") -> None:
         """Test that power names from config are shown in the list."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -201,7 +206,7 @@ class TestNetClassificationDialogConfigDisplay:
         assert "DVDD" in power_names
         assert "VDD_CORE" in power_names
 
-    def test_dialog_displays_power_patterns(self, qtbot) -> None:
+    def test_dialog_displays_power_patterns(self, qtbot: "QtBot") -> None:
         """Test that power patterns from config are shown in the list."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -217,7 +222,7 @@ class TestNetClassificationDialogConfigDisplay:
         assert "^PWR_.*$" in power_patterns
         assert "^VDDQ[0-9]*$" in power_patterns
 
-    def test_dialog_displays_ground_names(self, qtbot) -> None:
+    def test_dialog_displays_ground_names(self, qtbot: "QtBot") -> None:
         """Test that ground names from config are shown in the list."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -233,7 +238,7 @@ class TestNetClassificationDialogConfigDisplay:
         assert "AVSS" in ground_names
         assert "DVSS" in ground_names
 
-    def test_dialog_displays_ground_patterns(self, qtbot) -> None:
+    def test_dialog_displays_ground_patterns(self, qtbot: "QtBot") -> None:
         """Test that ground patterns from config are shown in the list."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -248,7 +253,7 @@ class TestNetClassificationDialogConfigDisplay:
         ground_patterns = dialog.get_ground_patterns()
         assert "^GND_.*$" in ground_patterns
 
-    def test_dialog_displays_override_defaults(self, qtbot) -> None:
+    def test_dialog_displays_override_defaults(self, qtbot: "QtBot") -> None:
         """Test that override defaults checkbox reflects config."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -266,7 +271,7 @@ class TestNetClassificationDialogConfigDisplay:
 class TestNetClassificationDialogGetConfig:
     """Tests for retrieving the edited configuration."""
 
-    def test_get_config_returns_config_object(self, qtbot) -> None:
+    def test_get_config_returns_config_object(self, qtbot: "QtBot") -> None:
         """Test that get_config returns a NetClassificationConfig."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -279,7 +284,7 @@ class TestNetClassificationDialogGetConfig:
         result = dialog.get_config()
         assert isinstance(result, NetClassificationConfig)
 
-    def test_get_config_preserves_power_names(self, qtbot) -> None:
+    def test_get_config_preserves_power_names(self, qtbot: "QtBot") -> None:
         """Test that get_config preserves power names."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -295,7 +300,7 @@ class TestNetClassificationDialogGetConfig:
         assert "AVDD" in result.power_names
         assert "DVDD" in result.power_names
 
-    def test_get_config_preserves_override_defaults(self, qtbot) -> None:
+    def test_get_config_preserves_override_defaults(self, qtbot: "QtBot") -> None:
         """Test that get_config preserves override_defaults flag."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -308,7 +313,7 @@ class TestNetClassificationDialogGetConfig:
         result = dialog.get_config()
         assert result.override_defaults is True
 
-    def test_get_config_reflects_checkbox_change(self, qtbot) -> None:
+    def test_get_config_reflects_checkbox_change(self, qtbot: "QtBot") -> None:
         """Test that toggling the checkbox is reflected in get_config."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -330,7 +335,7 @@ class TestNetClassificationDialogGetConfig:
 class TestNetClassificationDialogEmptyConfig:
     """Tests for dialog with empty configuration."""
 
-    def test_dialog_handles_empty_config(self, qtbot) -> None:
+    def test_dialog_handles_empty_config(self, qtbot: "QtBot") -> None:
         """Test that dialog works with empty config."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,
@@ -345,7 +350,7 @@ class TestNetClassificationDialogEmptyConfig:
         assert len(dialog.get_ground_names()) == 0
         assert len(dialog.get_ground_patterns()) == 0
 
-    def test_empty_config_override_false(self, qtbot) -> None:
+    def test_empty_config_override_false(self, qtbot: "QtBot") -> None:
         """Test that empty config has override_defaults=False."""
         from ink.presentation.dialogs.net_classification_dialog import (
             NetClassificationDialog,

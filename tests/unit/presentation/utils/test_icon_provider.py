@@ -206,7 +206,7 @@ class TestResourceFilesExist:
         for resource_path in IconProvider.ICON_MAP.values():
             qfile = QFile(resource_path)
             if qfile.open(QFile.OpenModeFlag.ReadOnly):
-                content = bytes(qfile.readAll()).decode("utf-8")
+                content = bytes(qfile.readAll().data()).decode("utf-8")
                 qfile.close()
                 # Basic SVG validation - should contain svg tag
                 assert "<svg" in content.lower(), (

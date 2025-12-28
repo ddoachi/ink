@@ -231,7 +231,7 @@ class TestFileActions:
         Acceptance Criteria:
             - File dialog filters for `.ckt` and `.cdl` files
         """
-        captured_filter = None
+        captured_filter: str | None = None
 
         def mock_get_open_filename(
             *args: object, **kwargs: object
@@ -239,9 +239,9 @@ class TestFileActions:
             nonlocal captured_filter
             # Qt's filter string is typically the 4th positional arg or 'filter' kwarg
             if len(args) >= 4:
-                captured_filter = args[3]
+                captured_filter = str(args[3])
             elif "filter" in kwargs:
-                captured_filter = kwargs["filter"]
+                captured_filter = str(kwargs["filter"])
             return ("", "")
 
         monkeypatch.setattr(QFileDialog, "getOpenFileName", mock_get_open_filename)
@@ -380,7 +380,7 @@ class TestUndoRedoStateManagement:
         Acceptance Criteria:
             - Undo button enables after first expansion/collapse
         """
-        main_window._expansion_service = mock_expansion_service
+        setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = True
         mock_expansion_service.can_redo.return_value = False
 
@@ -397,7 +397,7 @@ class TestUndoRedoStateManagement:
         Acceptance Criteria:
             - Redo button enables after undo
         """
-        main_window._expansion_service = mock_expansion_service
+        setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = False
         mock_expansion_service.can_redo.return_value = True
 
@@ -415,7 +415,7 @@ class TestUndoRedoStateManagement:
             - Undo button disables when history empty
             - Redo button disables when no redo available
         """
-        main_window._expansion_service = mock_expansion_service
+        setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = False
         mock_expansion_service.can_redo.return_value = False
 
@@ -428,7 +428,7 @@ class TestUndoRedoStateManagement:
         self, main_window: InkMainWindow, mock_expansion_service: Mock
     ) -> None:
         """Test both buttons enabled when both undo and redo available."""
-        main_window._expansion_service = mock_expansion_service
+        setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = True
         mock_expansion_service.can_redo.return_value = True
 
@@ -445,7 +445,7 @@ class TestUndoRedoStateManagement:
         Acceptance Criteria:
             - Clicking Undo button undoes last expansion/collapse
         """
-        main_window._expansion_service = mock_expansion_service
+        setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = True
         main_window._undo_action.setEnabled(True)
 
@@ -461,7 +461,7 @@ class TestUndoRedoStateManagement:
         Acceptance Criteria:
             - Clicking Redo button redoes last undone action
         """
-        main_window._expansion_service = mock_expansion_service
+        setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_redo.return_value = True
         main_window._redo_action.setEnabled(True)
 
@@ -473,7 +473,7 @@ class TestUndoRedoStateManagement:
         self, main_window: InkMainWindow, mock_expansion_service: Mock
     ) -> None:
         """Test undo/redo state updates after undo operation."""
-        main_window._expansion_service = mock_expansion_service
+        setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = True
         mock_expansion_service.can_redo.return_value = False
         main_window._undo_action.setEnabled(True)
@@ -564,7 +564,7 @@ class TestSearchPanelIntegration:
         Acceptance Criteria:
             - Clicking Search button shows search panel
         """
-        main_window._search_panel = mock_search_panel
+        setattr(main_window, "_search_panel", mock_search_panel)
         mock_search_panel.isVisible.return_value = False
 
         main_window._on_find()
@@ -580,7 +580,7 @@ class TestSearchPanelIntegration:
         Acceptance Criteria:
             - Clicking Search button focuses search input if panel already visible
         """
-        main_window._search_panel = mock_search_panel
+        setattr(main_window, "_search_panel", mock_search_panel)
         mock_search_panel.isVisible.return_value = True
 
         main_window._on_find()
