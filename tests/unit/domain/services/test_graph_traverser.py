@@ -36,7 +36,7 @@ class TestGraphTraverserProtocol:
         from ink.domain.services import GraphTraverser
 
         # Check that it's a Protocol subclass
-        assert issubclass(GraphTraverser, Protocol)
+        assert issubclass(GraphTraverser, Protocol)  # type: ignore[arg-type]
 
     def test_graph_traverser_is_runtime_checkable(self) -> None:
         """GraphTraverser should be runtime_checkable for isinstance checks."""

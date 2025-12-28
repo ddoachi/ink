@@ -438,6 +438,7 @@ class TestViewControlActions:
         qtbot.addWidget(window)
 
         toolbar = window.findChild(QToolBar, "MainToolBar")
+        assert toolbar is not None
         actions = toolbar.actions()
         action_texts = [a.text() for a in actions if not a.isSeparator()]
 
@@ -464,6 +465,7 @@ class TestViewControlActions:
         qtbot.addWidget(window)
 
         toolbar = window.findChild(QToolBar, "MainToolBar")
+        assert toolbar is not None
         actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
 
         zoom_in = actions["Zoom In"]
@@ -485,6 +487,7 @@ class TestViewControlActions:
         qtbot.addWidget(window)
 
         toolbar = window.findChild(QToolBar, "MainToolBar")
+        assert toolbar is not None
         actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
 
         # Tooltips should contain shortcut information
@@ -509,6 +512,7 @@ class TestViewControlActions:
         window.schematic_canvas = mock_canvas
 
         toolbar = window.findChild(QToolBar, "MainToolBar")
+        assert toolbar is not None
         actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
 
         actions["Zoom In"].trigger()
@@ -531,6 +535,7 @@ class TestViewControlActions:
         window.schematic_canvas = mock_canvas
 
         toolbar = window.findChild(QToolBar, "MainToolBar")
+        assert toolbar is not None
         actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
 
         actions["Zoom Out"].trigger()
@@ -553,6 +558,7 @@ class TestViewControlActions:
         window.schematic_canvas = mock_canvas
 
         toolbar = window.findChild(QToolBar, "MainToolBar")
+        assert toolbar is not None
         actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
 
         actions["Fit View"].trigger()
@@ -572,6 +578,7 @@ class TestViewControlActions:
         window.schematic_canvas = None  # type: ignore[assignment]
 
         toolbar = window.findChild(QToolBar, "MainToolBar")
+        assert toolbar is not None
         actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
 
         # Should not raise exception
@@ -599,6 +606,7 @@ class TestViewControlActions:
         window.schematic_canvas = mock_canvas
 
         toolbar = window.findChild(QToolBar, "MainToolBar")
+        assert toolbar is not None
         actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
 
         # Should not raise exception - graceful degradation
@@ -618,6 +626,7 @@ class TestViewControlActions:
         qtbot.addWidget(window)
 
         toolbar = window.findChild(QToolBar, "MainToolBar")
+        assert toolbar is not None
         actions = {a.text(): a for a in toolbar.actions() if not a.isSeparator()}
 
         assert actions["Zoom In"].isEnabled()
@@ -665,6 +674,7 @@ class TestViewControlActions:
         qtbot.addWidget(window)
 
         toolbar = window.findChild(QToolBar, "MainToolBar")
+        assert toolbar is not None
         actions = toolbar.actions()
 
         # Find Fit View action (last in view group)

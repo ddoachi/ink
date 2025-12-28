@@ -258,7 +258,7 @@ class TestSelectionServiceIntegration:
             selection_changed = Signal(list)
 
         mock_service = MockSelectionService()
-        main_window.selection_service = mock_service
+        setattr(main_window, "selection_service", mock_service)
 
         # Reconnect signals with the mock service
         main_window._connect_status_signals()
@@ -287,7 +287,7 @@ class TestSelectionServiceIntegration:
             selection_changed = Signal(list)
 
         mock_service = MockSelectionService()
-        main_window.selection_service = mock_service
+        setattr(main_window, "selection_service", mock_service)
 
         # Reconnect signals with the mock service
         main_window._connect_status_signals()
@@ -309,7 +309,7 @@ class TestSelectionServiceIntegration:
         # Create a mock without the signal
         mock_service = Mock(spec=[])  # Empty spec, no selection_changed
 
-        main_window.selection_service = mock_service
+        setattr(main_window, "selection_service", mock_service)
 
         # Should not raise exception
         main_window._connect_status_signals()

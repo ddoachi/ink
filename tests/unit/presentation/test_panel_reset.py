@@ -692,5 +692,5 @@ class TestStateAfterReset:
 
         # State manager should reflect the new state (all visible)
         assert main_window.panel_state_manager.state.panels["Hierarchy"].visible
-        assert main_window.panel_state_manager.state.panels["Properties"].visible
+        assert main_window.panel_state_manager.state.panels["Properties"].visible  # type: ignore[unreachable]
         assert main_window.panel_state_manager.state.panels["Messages"].visible

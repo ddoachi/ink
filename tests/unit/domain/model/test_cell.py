@@ -6,8 +6,9 @@ Cell is a frozen dataclass with helper methods for identifying sequential elemen
 The Cell entity is a core domain concept representing gate instances in a netlist.
 """
 
-import pytest
 from dataclasses import FrozenInstanceError
+
+import pytest
 
 from ink.domain.model.cell import Cell
 from ink.domain.value_objects.identifiers import CellId, PinId
@@ -158,7 +159,7 @@ class TestCellImmutability:
         )
 
         with pytest.raises(FrozenInstanceError):
-            cell.pin_ids = [PinId("XI1.B")]  # type: ignore[misc]
+            cell.pin_ids = [PinId("XI1.B")]  # type: ignore[misc, assignment]
 
     def test_cell_is_sequential_cannot_be_reassigned(self) -> None:
         """Should raise error when trying to reassign is_sequential on frozen Cell."""

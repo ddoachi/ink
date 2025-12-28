@@ -10,8 +10,9 @@ Note: This file is named test_net_entity.py to avoid conflict with the existing
 test_net.py that tests NetInfo value object.
 """
 
-import pytest
 from dataclasses import FrozenInstanceError
+
+import pytest
 
 from ink.domain.model.net import Net
 from ink.domain.value_objects.identifiers import NetId, PinId
@@ -174,7 +175,7 @@ class TestNetImmutability:
         )
 
         with pytest.raises(FrozenInstanceError):
-            net.connected_pin_ids = [PinId("XI2.A")]  # type: ignore[misc]
+            net.connected_pin_ids = [PinId("XI2.A")]  # type: ignore[misc, assignment]
 
     def test_net_connected_pin_ids_tuple_is_immutable(self) -> None:
         """connected_pin_ids should be a tuple (immutable)."""

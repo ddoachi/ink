@@ -22,9 +22,17 @@ Architecture:
     Implements: GraphTraverser protocol from domain layer
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 
 from ink.domain.model import Cell, Design, Net, Pin
+
+if TYPE_CHECKING:
+    from ink.infrastructure.graph import NetworkXGraphTraverser
+
 from ink.domain.value_objects.identifiers import CellId, NetId, PinId
 from ink.domain.value_objects.pin_direction import PinDirection
 from ink.infrastructure.graph import NetworkXGraphBuilder
@@ -372,7 +380,7 @@ def cycle_design() -> Design:
     return design
 
 
-def build_traverser(design: Design):
+def build_traverser(design: Design) -> "NetworkXGraphTraverser":
     """Helper to build graph and traverser from design."""
     from ink.infrastructure.graph import NetworkXGraphTraverser
 

@@ -698,6 +698,7 @@ class TestHelpMenuAboutDialog:
 
         # Mock QMessageBox.about to prevent blocking
         with patch("ink.presentation.main_window.QMessageBox.about") as mock_about:
+            assert about_action is not None
             about_action.trigger()
 
             mock_about.assert_called_once()
@@ -723,6 +724,7 @@ class TestHelpMenuAboutDialog:
                 break
 
         with patch("ink.presentation.main_window.QMessageBox.about") as mock_about:
+            assert about_action is not None
             about_action.trigger()
 
             args = mock_about.call_args[0]
@@ -747,6 +749,7 @@ class TestHelpMenuAboutDialog:
                 break
 
         with patch("ink.presentation.main_window.QMessageBox.about") as mock_about:
+            assert about_action is not None
             about_action.trigger()
 
             args = mock_about.call_args[0]
@@ -771,6 +774,7 @@ class TestHelpMenuAboutDialog:
                 break
 
         with patch("ink.presentation.main_window.QMessageBox.about") as mock_about:
+            assert about_action is not None
             about_action.trigger()
 
             args = mock_about.call_args[0]
@@ -796,6 +800,7 @@ class TestHelpMenuAboutDialog:
                 break
 
         with patch("ink.presentation.main_window.QMessageBox.about") as mock_about:
+            assert about_action is not None
             about_action.trigger()
 
             args = mock_about.call_args[0]

@@ -6,7 +6,8 @@
   "scripts": {
     "clickup:sync": "npx ts-node scripts/clickup/sync-specs-to-clickup.ts",
     "spec:start": "npx ts-node scripts/workflow/start-spec.ts",
-    "spec:next": "npx ts-node scripts/workflow/next-spec.ts"
+    "spec:next": "npx ts-node scripts/workflow/next-spec.ts",
+    "verify": "uv run mypy && uv run pytest -v"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",

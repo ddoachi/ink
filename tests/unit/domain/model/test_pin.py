@@ -8,11 +8,12 @@ The Pin entity is a core domain concept used in graph traversal to determine
 connectivity between cells via nets.
 """
 
-import pytest
 from dataclasses import FrozenInstanceError
 
+import pytest
+
 from ink.domain.model.pin import Pin
-from ink.domain.value_objects.identifiers import PinId, NetId
+from ink.domain.value_objects.identifiers import NetId, PinId
 from ink.domain.value_objects.pin_direction import PinDirection
 
 

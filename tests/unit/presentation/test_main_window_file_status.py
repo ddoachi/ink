@@ -444,7 +444,7 @@ class TestUpdateViewCountsBehavior:
 
         After file is closed, expansion_state may be set to None.
         """
-        main_window.expansion_state = None
+        setattr(main_window, "expansion_state", None)
 
         main_window._update_view_counts()
         assert main_window.object_count_label.text() == "Cells: 0 / Nets: 0"
@@ -460,7 +460,7 @@ class TestUpdateViewCountsBehavior:
         mock_state = Mock()
         mock_state.visible_cells = {"cell1", "cell2", "cell3", "cell4", "cell5"}
         mock_state.visible_nets = {"net1", "net2", "net3"}
-        main_window.expansion_state = mock_state
+        setattr(main_window, "expansion_state", mock_state)
 
         main_window._update_view_counts()
         assert main_window.object_count_label.text() == "Cells: 5 / Nets: 3"
@@ -475,7 +475,7 @@ class TestUpdateViewCountsBehavior:
         mock_state = Mock()
         mock_state.visible_cells = set()
         mock_state.visible_nets = set()
-        main_window.expansion_state = mock_state
+        setattr(main_window, "expansion_state", mock_state)
 
         main_window._update_view_counts()
         assert main_window.object_count_label.text() == "Cells: 0 / Nets: 0"
@@ -490,7 +490,7 @@ class TestUpdateViewCountsBehavior:
         mock_state = Mock()
         mock_state.visible_cells = {f"cell{i}" for i in range(5000)}
         mock_state.visible_nets = {f"net{i}" for i in range(7500)}
-        main_window.expansion_state = mock_state
+        setattr(main_window, "expansion_state", mock_state)
 
         main_window._update_view_counts()
         assert main_window.object_count_label.text() == "Cells: 5000 / Nets: 7500"
