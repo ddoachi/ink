@@ -380,7 +380,7 @@ def cycle_design() -> Design:
     return design
 
 
-def build_traverser(design: Design) -> "NetworkXGraphTraverser":
+def build_traverser(design: Design) -> NetworkXGraphTraverser:
     """Helper to build graph and traverser from design."""
     from ink.infrastructure.graph import NetworkXGraphTraverser
 

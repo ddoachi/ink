@@ -444,6 +444,7 @@ class TestUpdateViewCountsBehavior:
 
         After file is closed, expansion_state may be set to None.
         """
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "expansion_state", None)
 
         main_window._update_view_counts()
@@ -460,6 +461,7 @@ class TestUpdateViewCountsBehavior:
         mock_state = Mock()
         mock_state.visible_cells = {"cell1", "cell2", "cell3", "cell4", "cell5"}
         mock_state.visible_nets = {"net1", "net2", "net3"}
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "expansion_state", mock_state)
 
         main_window._update_view_counts()
@@ -475,6 +477,7 @@ class TestUpdateViewCountsBehavior:
         mock_state = Mock()
         mock_state.visible_cells = set()
         mock_state.visible_nets = set()
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "expansion_state", mock_state)
 
         main_window._update_view_counts()
@@ -490,6 +493,7 @@ class TestUpdateViewCountsBehavior:
         mock_state = Mock()
         mock_state.visible_cells = {f"cell{i}" for i in range(5000)}
         mock_state.visible_nets = {f"net{i}" for i in range(7500)}
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "expansion_state", mock_state)
 
         main_window._update_view_counts()

@@ -39,6 +39,18 @@ from __future__ import annotations
 
 from enum import IntEnum
 
+# =============================================================================
+# Zoom Threshold Constants (E02-F01-T04)
+# =============================================================================
+# These define the zoom level boundaries for detail level transitions.
+# Defined at module level to avoid mypy issues with Enum member annotations.
+
+MINIMAL_THRESHOLD: float = 0.25
+"""Zoom threshold for MINIMAL level. Below this: show minimal detail."""
+
+FULL_THRESHOLD: float = 0.75
+"""Zoom threshold for FULL level. At or above this: show full detail."""
+
 
 class DetailLevel(IntEnum):
     """Enumeration of rendering detail levels for schematic items.
@@ -117,3 +129,61 @@ class DetailLevel(IntEnum):
 
     This level provides the highest fidelity for detailed work.
     """
+
+    # =========================================================================
+    # Factory Method - Zoom-Based LOD Selection (E02-F01-T04)
+    # =========================================================================
+
+    @classmethod
+    def from_zoom(cls, zoom_factor: float) -> DetailLevel:
+        """Determine the appropriate detail level based on zoom factor.
+
+        This factory method maps zoom levels to detail levels using the
+        following thresholds:
+        - MINIMAL: zoom_factor < 0.25 (less than 25%)
+        - BASIC: 0.25 <= zoom_factor < 0.75 (25% to 75%)
+        - FULL: zoom_factor >= 0.75 (75% and above)
+
+        The thresholds are chosen to provide:
+        - Optimal performance when zoomed out (MINIMAL reduces rendering)
+        - Balanced detail at moderate zoom (BASIC shows cell names)
+        - Full information when zoomed in (FULL shows all details)
+
+        Args:
+            zoom_factor: Current zoom level where 1.0 = 100%.
+                Values range from ~0.1 (10%) to ~5.0 (500%).
+                Negative or very small values are treated as MINIMAL.
+
+        Returns:
+            DetailLevel: The appropriate detail level for the given zoom.
+
+        Example:
+            >>> DetailLevel.from_zoom(0.1)
+            DetailLevel.MINIMAL
+            >>> DetailLevel.from_zoom(0.5)
+            DetailLevel.BASIC
+            >>> DetailLevel.from_zoom(1.0)
+            DetailLevel.FULL
+
+        Note:
+            This method is called frequently during zoom animations, so it
+            must be efficient. Simple threshold comparisons ensure O(1)
+            performance.
+
+        See Also:
+            - Spec E02-F01-T04 for zoom LOD requirements
+            - SchematicCanvas._apply_zoom() for usage context
+        """
+        # Handle edge cases: negative or very small values → MINIMAL
+        # This provides graceful degradation for invalid zoom values
+        if zoom_factor < MINIMAL_THRESHOLD:
+            return cls.MINIMAL
+
+        # Mid-range zoom: 25% to 75% → BASIC detail
+        # Shows cell names but not full pin details
+        if zoom_factor < FULL_THRESHOLD:
+            return cls.BASIC
+
+        # High zoom: 75% and above → FULL detail
+        # Shows all visual elements including clock indicators and pin arrows
+        return cls.FULL

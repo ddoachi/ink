@@ -380,6 +380,7 @@ class TestUndoRedoStateManagement:
         Acceptance Criteria:
             - Undo button enables after first expansion/collapse
         """
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = True
         mock_expansion_service.can_redo.return_value = False
@@ -397,6 +398,7 @@ class TestUndoRedoStateManagement:
         Acceptance Criteria:
             - Redo button enables after undo
         """
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = False
         mock_expansion_service.can_redo.return_value = True
@@ -415,6 +417,7 @@ class TestUndoRedoStateManagement:
             - Undo button disables when history empty
             - Redo button disables when no redo available
         """
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = False
         mock_expansion_service.can_redo.return_value = False
@@ -428,6 +431,7 @@ class TestUndoRedoStateManagement:
         self, main_window: InkMainWindow, mock_expansion_service: Mock
     ) -> None:
         """Test both buttons enabled when both undo and redo available."""
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = True
         mock_expansion_service.can_redo.return_value = True
@@ -445,6 +449,7 @@ class TestUndoRedoStateManagement:
         Acceptance Criteria:
             - Clicking Undo button undoes last expansion/collapse
         """
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = True
         main_window._undo_action.setEnabled(True)
@@ -461,6 +466,7 @@ class TestUndoRedoStateManagement:
         Acceptance Criteria:
             - Clicking Redo button redoes last undone action
         """
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_redo.return_value = True
         main_window._redo_action.setEnabled(True)
@@ -473,6 +479,7 @@ class TestUndoRedoStateManagement:
         self, main_window: InkMainWindow, mock_expansion_service: Mock
     ) -> None:
         """Test undo/redo state updates after undo operation."""
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "_expansion_service", mock_expansion_service)
         mock_expansion_service.can_undo.return_value = True
         mock_expansion_service.can_redo.return_value = False
@@ -564,6 +571,7 @@ class TestSearchPanelIntegration:
         Acceptance Criteria:
             - Clicking Search button shows search panel
         """
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "_search_panel", mock_search_panel)
         mock_search_panel.isVisible.return_value = False
 
@@ -580,6 +588,7 @@ class TestSearchPanelIntegration:
         Acceptance Criteria:
             - Clicking Search button focuses search input if panel already visible
         """
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "_search_panel", mock_search_panel)
         mock_search_panel.isVisible.return_value = True
 
@@ -679,7 +688,8 @@ class TestGracefulDegradation:
         if hasattr(main_window, "_search_panel"):
             # For this test, we need to handle the case where _search_panel
             # might be set to a real panel. Set it to None to test graceful handling.
-            main_window._search_panel = None
+            # Use setattr to bypass mypy (testing pattern for dependency injection)
+            setattr(main_window, "_search_panel", None)
 
         # First hide the message_dock to test it gets shown
         main_window.message_dock.hide()
