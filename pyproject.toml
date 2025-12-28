@@ -92,6 +92,11 @@ ignore_missing_imports = true
 module = "ink.presentation.resources_rc"
 ignore_errors = true
 
+# Tests that work directly with networkx graphs need relaxed type checking
+[[tool.mypy.overrides]]
+module = "tests.unit.infrastructure.layout.test_layer_assignment"
+disallow_any_unimported = false
+
 # =============================================================================
 # PYRIGHT - Additional strict checking (used by VS Code Pylance)
 # =============================================================================
