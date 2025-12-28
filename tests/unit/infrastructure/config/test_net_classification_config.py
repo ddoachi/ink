@@ -16,9 +16,10 @@ See Also:
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-import pytest
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestNetClassificationConfigLoad:
@@ -189,11 +190,11 @@ class TestNetClassificationConfigSave:
 
     def test_save_writes_valid_yaml(self, tmp_path: Path) -> None:
         """Test that saved YAML can be parsed back."""
+        import yaml
+
         from ink.infrastructure.config.net_classification_config import (
             NetClassificationConfig,
         )
-
-        import yaml
 
         config = NetClassificationConfig(
             power_names=["AVDD", "DVDD"],

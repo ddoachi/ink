@@ -28,7 +28,6 @@ from ink.infrastructure.identification.topology_latch_identifier import (
     TopologyBasedLatchIdentifier,
 )
 
-
 # =============================================================================
 # FEEDBACK LOOP DETECTION (Primary - Naming Independent)
 # =============================================================================
@@ -486,7 +485,7 @@ class TestPatternFallback:
         identifier = TopologyBasedLatchIdentifier(case_sensitive=True)
 
         # Patterns are uppercase by default
-        result_lower = identifier.detect_with_reason("dff_x1")
+        _result_lower = identifier.detect_with_reason("dff_x1")
         result_upper = identifier.detect_with_reason("DFF_X1")
 
         # Case-sensitive: lowercase won't match uppercase patterns
@@ -597,7 +596,9 @@ class TestCachingBehavior:
         result2 = identifier.detect_with_reason("MY_CELL")
 
         assert result2.strategy == DetectionStrategy.FEEDBACK_LOOP
-        assert result2.strategy != initial_strategy or initial_strategy == DetectionStrategy.FEEDBACK_LOOP
+        is_different = result2.strategy != initial_strategy
+        was_already_feedback = initial_strategy == DetectionStrategy.FEEDBACK_LOOP
+        assert is_different or was_already_feedback
 
     def test_cache_invalidation_on_explicit_annotation(self) -> None:
         """Cache is invalidated when explicit annotation is added."""

@@ -184,7 +184,7 @@ class TestParseSubcktLineErrors:
             raw=".SUBCKT",
         )
         parser = SubcircuitParser()
-        with pytest.raises(ValueError, match="Invalid .SUBCKT"):
+        with pytest.raises(ValueError, match=r"Invalid \.SUBCKT"):
             parser.parse_subckt_line(token)
 
     def test_error_no_ports(self) -> None:
@@ -323,7 +323,7 @@ class TestParseEndsLineErrors:
             raw=".ENDS INV",
         )
         parser = SubcircuitParser()
-        with pytest.raises(ValueError, match="without matching .SUBCKT"):
+        with pytest.raises(ValueError, match=r"without matching \.SUBCKT"):
             parser.parse_ends_line(token)
 
     def test_error_ends_wrong_name(self) -> None:

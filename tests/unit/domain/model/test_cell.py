@@ -6,8 +6,9 @@ Cell is a frozen dataclass with helper methods for identifying sequential elemen
 The Cell entity is a core domain concept representing gate instances in a netlist.
 """
 
-import pytest
 from dataclasses import FrozenInstanceError
+
+import pytest
 
 from ink.domain.model.cell import Cell
 from ink.domain.value_objects.identifiers import CellId, PinId

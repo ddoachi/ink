@@ -10,8 +10,9 @@ Note: This file is named test_net_entity.py to avoid conflict with the existing
 test_net.py that tests NetInfo value object.
 """
 
-import pytest
 from dataclasses import FrozenInstanceError
+
+import pytest
 
 from ink.domain.model.net import Net
 from ink.domain.value_objects.identifiers import NetId, PinId

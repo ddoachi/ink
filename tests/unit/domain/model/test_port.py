@@ -7,11 +7,12 @@ The Port entity is a core domain concept for representing the external
 interface of a design (inputs, outputs, and bidirectional pins).
 """
 
-import pytest
 from dataclasses import FrozenInstanceError
 
+import pytest
+
 from ink.domain.model.port import Port
-from ink.domain.value_objects.identifiers import PortId, NetId
+from ink.domain.value_objects.identifiers import NetId, PortId
 from ink.domain.value_objects.pin_direction import PinDirection
 
 
