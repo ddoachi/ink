@@ -258,6 +258,7 @@ class TestSelectionServiceIntegration:
             selection_changed = Signal(list)
 
         mock_service = MockSelectionService()
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "selection_service", mock_service)
 
         # Reconnect signals with the mock service
@@ -287,6 +288,7 @@ class TestSelectionServiceIntegration:
             selection_changed = Signal(list)
 
         mock_service = MockSelectionService()
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "selection_service", mock_service)
 
         # Reconnect signals with the mock service
@@ -309,6 +311,7 @@ class TestSelectionServiceIntegration:
         # Create a mock without the signal
         mock_service = Mock(spec=[])  # Empty spec, no selection_changed
 
+        # Use setattr to bypass mypy (testing pattern for dependency injection)
         setattr(main_window, "selection_service", mock_service)
 
         # Should not raise exception

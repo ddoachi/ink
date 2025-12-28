@@ -200,7 +200,7 @@ class TestZoomLODIntegration:
         items are updated when zoom changes.
         """
         # Create multiple cells and pins
-        items = []
+        items: list[CellItem | PinItem] = []
         for i in range(5):
             cell = Cell(
                 id=CellId(f"U{i}"),
@@ -234,7 +234,8 @@ class TestZoomLODIntegration:
         for item in items:
             if isinstance(item, CellItem):
                 assert item.get_detail_level() == DetailLevel.MINIMAL
-            elif isinstance(item, PinItem):
+            else:
+                # item is PinItem
                 assert not item.isVisible()
 
 
@@ -342,7 +343,7 @@ class TestZoomLODPerformance:
         import time
 
         # Create 100 cells with pins (200 items total)
-        items = []
+        items: list[CellItem | PinItem] = []
         for i in range(100):
             cell = Cell(
                 id=CellId(f"U{i}"),
