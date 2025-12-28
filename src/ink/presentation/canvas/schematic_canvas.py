@@ -17,8 +17,16 @@ Architecture Notes:
     - Will be replaced by QGraphicsView subclass in E02
     - Interface (parent parameter, basic widget behavior) will remain stable
 
+Zoom Level of Detail (E02-F01-T04):
+    - Tracks current zoom factor and corresponding detail level
+    - Provides zoom_in/zoom_out methods with LOD integration
+    - Emits zoom_changed signal for status bar updates
+    - Clamps zoom to MIN_ZOOM (10%) and MAX_ZOOM (500%)
+    - Uses DetailLevel enum for MINIMAL/BASIC/FULL rendering
+
 See Also:
     - Spec E06-F01-T02 for detailed requirements
+    - Spec E02-F01-T04 for zoom LOD requirements
     - E02 (Rendering) for future QGraphicsView implementation
 """
 
@@ -26,6 +34,8 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
+
+from ink.presentation.canvas.detail_level import DetailLevel
 
 
 class SchematicCanvas(QWidget):
@@ -86,6 +96,21 @@ class SchematicCanvas(QWidget):
     zoom_changed = Signal(float)
 
     # ==========================================================================
+    # Zoom Constants (E02-F01-T04)
+    # ==========================================================================
+    # These values define the zoom behavior and limits for the canvas.
+    # Zoom factor: 1.0 = 100%, 0.5 = 50%, 2.0 = 200%
+
+    MIN_ZOOM: float = 0.1
+    """Minimum zoom factor (10%). Prevents zooming out too far."""
+
+    MAX_ZOOM: float = 5.0
+    """Maximum zoom factor (500%). Prevents zooming in too far."""
+
+    ZOOM_STEP: float = 1.25
+    """Zoom step multiplier (25% per step). Applied on zoom_in/zoom_out."""
+
+    # ==========================================================================
     # Placeholder Configuration Constants
     # ==========================================================================
     # Centralized here for easy modification and testing
@@ -102,12 +127,22 @@ class SchematicCanvas(QWidget):
         informational text. The layout uses zero margins to ensure
         the canvas fills the entire central area of the main window.
 
+        Initializes zoom tracking state (E02-F01-T04):
+        - _current_zoom: Current zoom factor (default 1.0 = 100%)
+        - _current_detail_level: Current LOD (default FULL at 100% zoom)
+
         Args:
             parent: Parent widget (typically InkMainWindow). Defaults to None
                 for standalone use, but should be set for proper memory
                 management in production.
         """
         super().__init__(parent)
+
+        # Initialize zoom tracking state (E02-F01-T04)
+        # Start at 100% zoom with FULL detail level
+        self._current_zoom: float = 1.0
+        self._current_detail_level: DetailLevel = DetailLevel.FULL
+
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -163,62 +198,234 @@ class SchematicCanvas(QWidget):
         return label
 
     # =========================================================================
-    # View Control Methods (E06-F03-T02)
+    # Zoom State Properties (E02-F01-T04)
+    # =========================================================================
+    # Properties for accessing the current zoom state.
+    # These are read-only to ensure zoom changes go through proper methods.
+
+    @property
+    def current_zoom(self) -> float:
+        """Return the current zoom factor.
+
+        The zoom factor represents the current view scale where:
+        - 1.0 = 100% (default)
+        - 0.5 = 50%
+        - 2.0 = 200%
+
+        Returns:
+            float: Current zoom factor in range [MIN_ZOOM, MAX_ZOOM].
+
+        Example:
+            >>> canvas = SchematicCanvas()
+            >>> canvas.current_zoom
+            1.0
+        """
+        return self._current_zoom
+
+    @property
+    def current_detail_level(self) -> DetailLevel:
+        """Return the current detail level for rendering.
+
+        The detail level is automatically computed from the zoom factor:
+        - MINIMAL: zoom < 0.25 (less than 25%)
+        - BASIC: 0.25 <= zoom < 0.75 (25% to 75%)
+        - FULL: zoom >= 0.75 (75% and above)
+
+        Returns:
+            DetailLevel: Current detail level for graphics items.
+
+        Example:
+            >>> canvas = SchematicCanvas()
+            >>> canvas.current_detail_level
+            DetailLevel.FULL
+        """
+        return self._current_detail_level
+
+    # =========================================================================
+    # View Control Methods (E06-F03-T02 + E02-F01-T04)
     # =========================================================================
     # These methods provide the canvas API for toolbar view controls.
-    # Currently no-op for placeholder; will have real implementation in E02.
+    # Now with zoom LOD integration for E02-F01-T04.
 
-    def zoom_in(self, factor: float = 1.2) -> None:
+    def zoom_in(self, _factor: float | None = None) -> None:
         """Zoom in by scaling factor.
 
-        Increases the view scale by the given factor (default 1.2 = 20% increase).
-        In the placeholder implementation, this is a no-op.
+        Increases the view scale by the given factor. Uses ZOOM_STEP (1.25)
+        if no factor is provided. Updates detail level if threshold crossed.
 
         Args:
-            factor: Scale multiplier (default 1.2).
+            _factor: Scale multiplier. Ignored in favor of ZOOM_STEP for
+                consistency. Kept for API compatibility with existing callers.
 
         Note:
-            Placeholder implementation for E06-F03-T02 toolbar integration.
-            Full implementation will be in E02 (Rendering epic) when this
-            becomes a QGraphicsView subclass.
+            The _factor parameter is kept for API compatibility but ZOOM_STEP
+            is always used to ensure consistent zoom behavior.
+
+        Example:
+            >>> canvas = SchematicCanvas()
+            >>> canvas.zoom_in()  # Zoom from 100% to 125%
+            >>> canvas.current_zoom
+            1.25
 
         See Also:
-            - E02: Full rendering implementation with actual zoom
+            - E02-F01-T04: Zoom LOD requirements
             - E06-F03-T02: Toolbar view controls
         """
-        # Placeholder: No-op until E02 implements QGraphicsView with self.scale()
+        # Calculate new zoom using ZOOM_STEP for consistent behavior
+        new_zoom = self._current_zoom * self.ZOOM_STEP
 
-    def zoom_out(self, factor: float = 1.2) -> None:
+        # Apply the zoom (handles clamping and LOD update)
+        self._apply_zoom(new_zoom)
+
+    def zoom_out(self, _factor: float | None = None) -> None:
         """Zoom out by inverse scaling factor.
 
-        Decreases the view scale by the inverse of the given factor
-        (default 1.2 = ~17% decrease).
+        Decreases the view scale by dividing by ZOOM_STEP (1.25).
+        Updates detail level if threshold crossed.
 
         Args:
-            factor: Scale divisor (default 1.2).
+            _factor: Scale divisor. Ignored in favor of ZOOM_STEP for
+                consistency. Kept for API compatibility with existing callers.
 
-        Note:
-            Placeholder implementation for E06-F03-T02 toolbar integration.
-            Full implementation will be in E02 (Rendering epic).
+        Example:
+            >>> canvas = SchematicCanvas()
+            >>> canvas.zoom_out()  # Zoom from 100% to 80%
+            >>> canvas.current_zoom
+            0.8
 
         See Also:
-            - E02: Full rendering implementation with actual zoom
+            - E02-F01-T04: Zoom LOD requirements
             - E06-F03-T02: Toolbar view controls
         """
-        # Placeholder: No-op until E02 implements QGraphicsView with self.scale()
+        # Calculate new zoom using ZOOM_STEP for consistent behavior
+        new_zoom = self._current_zoom / self.ZOOM_STEP
+
+        # Apply the zoom (handles clamping and LOD update)
+        self._apply_zoom(new_zoom)
 
     def fit_view(self) -> None:
         """Fit all visible items in view.
 
         Centers the scene bounding rect in the viewport while preserving
-        the aspect ratio.
+        the aspect ratio. In the placeholder implementation, this maintains
+        the current zoom level.
 
         Note:
-            Placeholder implementation for E06-F03-T02 toolbar integration.
-            Full implementation will be in E02 (Rendering epic).
+            Placeholder implementation - actual fit calculation requires
+            QGraphicsView and scene content. The detail level is updated
+            based on the resulting zoom.
 
         See Also:
             - E02: Full rendering implementation with actual fit
             - E06-F03-T02: Toolbar view controls
         """
-        # Placeholder: No-op until E02 implements QGraphicsView with self.fitInView()
+        # Placeholder: In future E02 implementation, this will calculate
+        # the zoom needed to fit scene content in the viewport.
+        # For now, just ensure detail level is consistent with current zoom.
+        self._update_detail_level()
+
+    def set_zoom(self, zoom_factor: float) -> None:
+        """Set the zoom level to a specific value.
+
+        Directly sets the zoom factor, clamping to [MIN_ZOOM, MAX_ZOOM].
+        Updates detail level if threshold crossed.
+
+        Args:
+            zoom_factor: Desired zoom level where 1.0 = 100%.
+
+        Example:
+            >>> canvas = SchematicCanvas()
+            >>> canvas.set_zoom(0.5)  # Set to 50%
+            >>> canvas.current_zoom
+            0.5
+            >>> canvas.current_detail_level
+            DetailLevel.BASIC
+
+        See Also:
+            - E02-F01-T04: Zoom LOD requirements
+        """
+        self._apply_zoom(zoom_factor)
+
+    # =========================================================================
+    # Zoom Helper Methods (E02-F01-T04)
+    # =========================================================================
+    # Private methods for zoom calculation and LOD management.
+
+    def _apply_zoom(self, new_zoom: float) -> None:
+        """Apply a new zoom level with clamping and LOD update.
+
+        This is the central method for zoom changes. It:
+        1. Clamps the zoom to valid range
+        2. Updates the stored zoom value
+        3. Updates the detail level if threshold crossed
+        4. Emits zoom_changed signal
+
+        Args:
+            new_zoom: Desired zoom factor (will be clamped).
+
+        Note:
+            This method is called by zoom_in, zoom_out, and set_zoom.
+        """
+        # Clamp zoom to valid range
+        clamped_zoom = self._clamp_zoom(new_zoom)
+
+        # Skip if zoom hasn't changed (prevents unnecessary updates)
+        if clamped_zoom == self._current_zoom:
+            return
+
+        # Update stored zoom value
+        self._current_zoom = clamped_zoom
+
+        # Update detail level based on new zoom
+        self._update_detail_level()
+
+        # Emit signal with zoom as percentage for status bar
+        self.zoom_changed.emit(self._current_zoom * 100.0)
+
+    def _update_detail_level(self) -> None:
+        """Update detail level based on current zoom.
+
+        Calculates the appropriate detail level using DetailLevel.from_zoom()
+        and updates all graphics items if the level changed.
+
+        Note:
+            In the placeholder implementation, this only updates the stored
+            level. In the full QGraphicsView implementation, this will also
+            iterate through scene items to update their detail levels.
+        """
+        # Calculate new detail level from zoom
+        new_level = DetailLevel.from_zoom(self._current_zoom)
+
+        # Skip if level hasn't changed
+        if new_level == self._current_detail_level:
+            return
+
+        # Update stored level
+        self._current_detail_level = new_level
+
+        # Note: In the full QGraphicsView implementation, this method will
+        # iterate through scene items and call set_detail_level() on each
+        # CellItem and PinItem. For the placeholder, we only update the
+        # stored level.
+
+    def _clamp_zoom(self, zoom: float) -> float:
+        """Clamp zoom value to valid range.
+
+        Ensures zoom stays within [MIN_ZOOM, MAX_ZOOM].
+
+        Args:
+            zoom: Zoom value to clamp.
+
+        Returns:
+            float: Clamped zoom value in range [MIN_ZOOM, MAX_ZOOM].
+
+        Example:
+            >>> canvas = SchematicCanvas()
+            >>> canvas._clamp_zoom(0.01)  # Below MIN_ZOOM
+            0.1
+            >>> canvas._clamp_zoom(10.0)  # Above MAX_ZOOM
+            5.0
+            >>> canvas._clamp_zoom(0.5)   # Within range
+            0.5
+        """
+        return max(self.MIN_ZOOM, min(self.MAX_ZOOM, zoom))
